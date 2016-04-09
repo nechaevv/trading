@@ -7,4 +7,5 @@ trait TradeHistory {
   def firstTime: Long
   def lastTime: Long
   def range(from: Long, till: Long): Iterable[Trade]
+  def priceAt(time: Long): Double
 }

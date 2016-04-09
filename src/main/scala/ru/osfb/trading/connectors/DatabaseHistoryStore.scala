@@ -16,7 +16,7 @@ object DatabaseHistoryStore {
     import ru.osfb.trading.db.TradeHistoryModel.tradeHistoryTable
     database run {
       tradeHistoryTable
-        .filter(t => t.symbol === symbol && t.time.between(from,till))
+        .filter(t => t.symbol === symbol && t.time.between(from,till)).sortBy(_.time)
           .result.map(_.map(th => Trade(th.time.toEpochMilli/1000, (th.price * th.quantity).toDouble, th.quantity.toDouble)))
     }
   }

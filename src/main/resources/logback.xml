@@ -12,7 +12,7 @@
 
     <logger name="org.infinispan" level="DEBUG" />
     <logger name="slick" level="INFO" />
-    <logger name="slick.jdbc" level="DEBUG" />
+    <logger name="slick.jdbc" level="INFO" />
     <logger name="com.zaxxer.hikari" level="INFO" />
 
 </configuration>

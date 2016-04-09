@@ -16,5 +16,7 @@ class TreeTradeHistory(trades: Iterable[Trade]) extends TradeHistory {
   override def firstTime: Long = tradeTree.firstKey
   override def lastTime: Long = tradeTree.lastKey
   override def range(from: Long, till: Long): Iterable[Trade] = tradeTree.range(from, till).values
-
+  override def priceAt(time: Long): Double = tradeTree.to(time).last._2 match {
+    case Trade(_, amt, qty) => amt/qty
+  }
 }
