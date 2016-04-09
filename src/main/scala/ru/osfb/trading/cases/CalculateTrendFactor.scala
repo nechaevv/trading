@@ -37,67 +37,55 @@ object CalculateTrendFactor extends App with LazyLogging {
     val startTime = System.currentTimeMillis()
     //val history = new TreeTradeHistory(trades)
     val history = new ArrayTradeHistory(trades)
-    //val writer = new FileWriter("out.txt", false)
     var longPosition: Option[Double] = None
     var shortPosition: Option[Double] = None
-    var profit = 0.0
-    var loss = 0.0
-    var longSuccess = 0
-    var longFail = 0
-    var shortSuccess = 0
-    var shortFail = 0
+    var longStats = TradeStats(0,0,0,0)
+    var shortStats = TradeStats(0,0,0,0)
     logger.info(s"Running computation from $from till $till")
+    //val writer = new FileWriter("out.txt", false)
     for (time <- (fromSec + timeQuantum) to tillSec by timeQuantum) {
       val price = EMA(history, time, timeQuantum)
       val volatility = Volatility(history, time, timeQuantum)
       val trendFactor = TrendFactor(history, time - trendTimeFrame, time, timeQuantum)
-      logger.info(s"Time $time, price $price, trendFactor: $trendFactor")
+      //logger.info(s"Time $time, price $price, trendFactor: $trendFactor")
       //writer.write(s"$time $price $volatility $trendFactor\n")
       longPosition match {
-        case None => if (trendFactor > 2) {
+        case None => if (trendFactor > 1.6) {
           val price = history.priceAt(time)
           logger.info(s"Opening long position at $price")
           longPosition = Some(price)
         }
-        case Some(positionPrice) => if (trendFactor <= 0.0) {
+        case Some(positionPrice) => if (trendFactor <= -0.3) {
           val price = history.priceAt(time)
           logger.info(s"Closing long position at $price, profit: ${price - positionPrice}")
-          val tradeProfit = price - positionPrice
-          if (tradeProfit > 0) {
-            profit += tradeProfit
-            longSuccess += 1
-          } else {
-            loss += tradeProfit
-            longFail += 1
-          }
+          longStats = longStats.update(price - positionPrice)
           longPosition = None
         }
       }
       shortPosition match {
-        case None => if (trendFactor < 2) {
+        case None => if (trendFactor < -1.6) {
           val price = history.priceAt(time)
           logger.info(s"Opening short position at $price")
           shortPosition = Some(price)
         }
-        case Some(positionPrice) => if (trendFactor >= 0.0) {
+        case Some(positionPrice) => if (trendFactor >= 0.3) {
           val price = history.priceAt(time)
           logger.info(s"Closing short position at $price, profit: ${positionPrice - price}")
-          val tradeProfit = positionPrice - price
-          if (tradeProfit > 0) {
-            profit += tradeProfit
-            shortSuccess += 1
-          } else {
-            loss += tradeProfit
-            shortFail += 1
-          }
+          shortStats = shortStats.update(positionPrice - price)
           shortPosition = None
         }
       }
     }
     val endTime = System.currentTimeMillis()
-    logger.info(s"Completed (${endTime - startTime} ms): profit $profit, loss $loss, total ${profit + loss}" +
-      s"\nlong $longSuccess success, $longFail fail, short $shortSuccess success, $shortFail fail")
+    logger.info(s"Completed (${endTime - startTime} ms): " +
+      s"profit ${longStats.profit + shortStats.profit + longStats.loss + shortStats.loss}" +
+      s"\nLong $longStats\nShort $shortStats")
     //writer.close()
   }, 1.hour)
 
+  case class TradeStats(profit: Double, loss: Double, success: Int, fail: Int) {
+    def update(newProfit: Double) = if(newProfit>0) TradeStats(profit + newProfit, loss, success + 1, fail)
+    else TradeStats(profit, loss + newProfit, success, fail + 1)
+  }
 }
+
