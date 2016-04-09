@@ -2,7 +2,7 @@ package ru.osfb.trading.indicators
 
 import java.time.{Duration, Instant}
 
-import ru.osfb.trading.model.TradeHistoryModel
+import ru.osfb.trading.db.TradeHistoryModel
 import slick.dbio.Effect.Read
 import slick.profile.FixedSqlAction
 import ru.osfb.trading.PgDriver.api._
