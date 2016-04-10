@@ -30,6 +30,13 @@ class TrendbotActor(symbol: String,
     val scheduleInterval = timeFrame/12
     context.system.scheduler.schedule(Duration.Zero, Duration(scheduleInterval, duration.SECONDS), self, DoAnalyze)
     logger.info(s"TrendBot actor started for $symbol with poll interval $scheduleInterval seconds")
+    notificationService.notify(s"Started for $symbol")
+  }
+
+
+  @scala.throws[Exception](classOf[Exception])
+  override def postStop(): Unit = {
+    notificationService.notify(s"Stopped for $symbol")
   }
 
   var stateOpt: Option[Indicators] = None
@@ -40,13 +47,13 @@ class TrendbotActor(symbol: String,
       indicatorService.computeIndicators(symbol) pipeTo self
     case newState@Indicators(price, trendFactor) =>
       for (state <- stateOpt) if (state.trendFactor <= openAt && newState.trendFactor > openAt) {
-        notificationService.notify("Long - Open")
+        notificationService.notify(symbol + "Long - Open")
       } else if (state.trendFactor >= -openAt && newState.trendFactor < -openAt) {
-        notificationService.notify("Short - Open")
+        notificationService.notify(symbol + "Short - Open")
       } else if (state.trendFactor >= closeAt && newState.trendFactor < closeAt) {
-        notificationService.notify("Long - Close")
+        notificationService.notify(symbol + "Long - Close")
       } else if (state.trendFactor <= -closeAt && newState.trendFactor > -closeAt) {
-        notificationService.notify("Short - Close")
+        notificationService.notify(symbol + "Short - Close")
       }
       stateOpt = Some(newState)
   }
