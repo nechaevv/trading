@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations._
-import ru.osfb.trading.connectors.{BfxData, BitcoinchartsServiceComponent, CsvHistoryStore, DatabaseHistoryStore}
+import ru.osfb.trading.connectors._
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -39,14 +39,15 @@ object CalculateTrendFactor extends App with LazyLogging {
   val fetchTimeStart = from minus time.Duration.ofSeconds(trendTimeFrame + timeQuantum*5)
   val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   //val trades = BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
+  //val trades = Finam.loadCsvTrades(args(0))
     logger.info("History load completed")
     val startTime = System.currentTimeMillis()
     //val history = new TreeTradeHistory(trades)
     val history = new ArrayTradeHistory(trades)
-    var longPosition: Option[Double] = None
-    var shortPosition: Option[Double] = None
-    var longStats = TradeStats(0,0,0,0)
-    var shortStats = TradeStats(0,0,0,0)
+    var longPosition: Option[Position] = None
+    var shortPosition: Option[Position] = None
+    var longStats = TradeStats(0,0,0,0,0,0)
+    var shortStats = TradeStats(0,0,0,0,0,0)
     var fee = 0.0
     logger.info(s"Running computation from $from till $till")
     //val writer = new FileWriter("out.txt", false)
@@ -61,13 +62,13 @@ object CalculateTrendFactor extends App with LazyLogging {
         case None => if (trendFactor > openAt) { //} && startVolatilityFactor < volatilityThreshold) {
           val price = history.priceAt(time)
           logger.info(s"${asDateTime(time)} Opening long position at $price")
-          longPosition = Some(price)
+          longPosition = Some(Position(time, price))
           fee += price * txFee
         }
-        case Some(positionPrice) => if (trendFactor <= closeAt) {
+        case Some(position) => if (trendFactor <= closeAt) {
           val price = history.priceAt(time)
-          logger.info(s"${asDateTime(time)} Closing long position at $price, profit: ${price - positionPrice}")
-          longStats = longStats.update(price - positionPrice)
+          logger.info(s"${asDateTime(time)} Closing long position at $price, profit: ${price - position.price}")
+          longStats = longStats.update(price - position.price, time - position.openAt)
           longPosition = None
           fee += price * txFee
         }
@@ -76,13 +77,13 @@ object CalculateTrendFactor extends App with LazyLogging {
         case None => if (trendFactor < -openAt) { //} && startVolatilityFactor < volatilityThreshold) {
           val price = history.priceAt(time)
           logger.info(s"${asDateTime(time)} Opening short position at $price")
-          shortPosition = Some(price)
+          shortPosition = Some(Position(time, price))
           fee += price * txFee
         }
-        case Some(positionPrice) => if (trendFactor >= -closeAt) {
+        case Some(position) => if (trendFactor >= -closeAt) {
           val price = history.priceAt(time)
-          logger.info(s"${asDateTime(time)} Closing short position at $price, profit: ${positionPrice - price}")
-          shortStats = shortStats.update(positionPrice - price)
+          logger.info(s"${asDateTime(time)} Closing short position at $price, profit: ${position.price - price}")
+          shortStats = shortStats.update(position.price - price, time - position.openAt)
           shortPosition = None
           fee += price * txFee
         }
@@ -92,12 +93,18 @@ object CalculateTrendFactor extends App with LazyLogging {
     logger.info(s"Completed (${endTime - startTime} ms): " +
 
       s"profit ${longStats.profit + shortStats.profit + longStats.loss + shortStats.loss}" +
-      s"\nLong $longStats\nShort $shortStats\nFee $fee")
+      s"\nLong\n$longStats\nShort\n$shortStats\nFee $fee")
     //writer.close()
 
-  case class TradeStats(profit: Double, loss: Double, success: Int, fail: Int) {
-    def update(newProfit: Double) = if(newProfit>0) TradeStats(profit + newProfit, loss, success + 1, fail)
-    else TradeStats(profit, loss + newProfit, success, fail + 1)
+  case class Position(openAt: Long, price: Double)
+
+  case class TradeStats(profit: Double, loss: Double, success: Int, fail: Int, successDuration: Long, failDuration: Long) {
+    def update(newProfit: Double, duration: Long) = if(newProfit>0) TradeStats(profit + newProfit, loss, success + 1, fail, successDuration + duration, failDuration)
+    else TradeStats(profit, loss + newProfit, success, fail + 1, successDuration, failDuration + duration)
+
+    override def toString: String = s"profit: $profit, loss: $loss, total: ${profit + loss}\n" +
+      s"success: $success, avg profit: ${if(success==0) 0 else profit/success}, fail: $fail, avg loss: ${if (fail==0) 0 else loss/fail}, total: ${success + fail}, avg: ${if (success+fail==0) 0 else (profit + loss)/(success + fail)}\n" +
+      s"avg success duration: ${if(success==0) 0 else successDuration/(success*3600)} h, avg fail duration: ${if (fail==0) 0 else failDuration/(fail*3600)} h"
   }
 
   def asDateTime(ts: Long) = Instant.ofEpochSecond(ts).toString
