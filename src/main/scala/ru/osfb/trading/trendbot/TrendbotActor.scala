@@ -30,6 +30,7 @@ class TrendbotActor(symbol: String,
     val scheduleInterval = timeFrame/12
     context.system.scheduler.schedule(Duration.Zero, Duration(scheduleInterval, duration.SECONDS), self, DoAnalyze)
     logger.info(s"TrendBot actor started for $symbol with poll interval $scheduleInterval seconds")
+    if (configuration.hasPath("trendbot.notify-start") && configuration.getBoolean("trendbot.notify-start"))
     notificationService.notify(s"Started for $symbol")
   }
 

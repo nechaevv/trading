@@ -39,7 +39,7 @@ trait IndicatorServiceComponent {   this: BitfinexExchangeComponent with Bitcoin
         val history = new ArrayTradeHistory(vwapData ++ bitcoinchartsTrades ++ bitfinexTrades)
         val TrendProperties(startPrice, endPrice, trendFactor) = TrendFactor(history, till - trendTimeSpan, till, avgTimeFrame)
         //val startVolatilityFactor = Volatility(history, from, avgTimeFrame) / Math.abs(endPrice - startPrice)
-        logger.trace(s"Time:${Instant.ofEpochSecond(till)}, start price:$startPrice, end price: $endPrice, trend factor:$trendFactor")
+        logger.trace(s"Time: from ${Instant.ofEpochSecond(till - trendTimeSpan)} till ${Instant.ofEpochSecond(till)}, start price:$startPrice, end price: $endPrice, trend factor:$trendFactor")
         Indicators(startPrice, trendFactor)
       }
     }
