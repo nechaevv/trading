@@ -1,4 +1,4 @@
-package ru.osfb.trading.trendbot
+package ru.osfb.trading.tradebot
 
 import ru.osfb.trading.connectors.{BitcoinchartsServiceComponent, BitfinexExchangeComponent}
 import ru.osfb.trading.notification.{NotificationService, PushAllNotificationServiceComponentImpl}

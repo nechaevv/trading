@@ -43,7 +43,7 @@ object CalculateTrendFactor extends App with LazyLogging {
     logger.info("History load completed")
     val startTime = System.currentTimeMillis()
     //val history = new TreeTradeHistory(trades)
-    val history = new ArrayTradeHistory(trades)
+    implicit val history = new ArrayTradeHistory(trades)
     var longPosition: Option[Position] = None
     var shortPosition: Option[Position] = None
     var longStats = TradeStats(0,0,0,0,0,0)
@@ -54,8 +54,8 @@ object CalculateTrendFactor extends App with LazyLogging {
     for (time <- (fromSec + timeQuantum) to tillSec by timeQuantum/4) {
       //val price = EMA(history, time, timeQuantum)
       //val volatility = Volatility(history, time, timeQuantum)
-      val TrendProperties(startPrice, endPrice, trendFactor) = TrendFactor(history, time - trendTimeFrame, time, timeQuantum)
-      val startVolatilityFactor = Volatility(history, time - trendTimeFrame, timeQuantum) / Math.abs(endPrice - startPrice)
+      val TrendProperties(startPrice, endPrice, trendFactor) = TrendFactor(time - trendTimeFrame, time, timeQuantum)
+      val startVolatilityFactor = Volatility(time - trendTimeFrame, timeQuantum) / Math.abs(endPrice - startPrice)
       //logger.info(s"Time $time, price $price, trendFactor: $trendFactor")
       //writer.write(s"$time $price $volatility $trendFactor\n")
       longPosition match {

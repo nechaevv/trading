@@ -24,7 +24,7 @@ trait PushAllNotificationServiceComponentImpl extends NotificationServiceCompone
     private lazy val subscriptionKey = configuration.getString("notification.pushall.subscription-key")
 
     override def notify(text: String): Future[Unit] = Http().singleRequest(HttpRequest(
-      uri = s"https://pushall.ru/api.php?type=self&id=$subscriptionId&key=$subscriptionKey&title=TrendBot&text=${URLEncoder.encode(text,"UTF-8")}"
+      uri = s"https://pushall.ru/api.php?type=self&id=$subscriptionId&key=$subscriptionKey&title=TradeBot&text=${URLEncoder.encode(text,"UTF-8")}"
     )).flatMap(r => Unmarshal(r.entity).to[String]).map(result => {
       logger.trace(s"Sent notification: $text, result: $result")
     }).withErrorLog(logger)

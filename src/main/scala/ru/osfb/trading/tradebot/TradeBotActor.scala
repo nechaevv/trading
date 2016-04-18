@@ -1,4 +1,4 @@
-package ru.osfb.trading.trendbot
+package ru.osfb.trading.tradebot
 
 import java.util.concurrent.TimeUnit
 
@@ -7,6 +7,7 @@ import akka.pattern.pipe
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.notification.NotificationService
+import ru.osfb.trading.strategies.{TradeStrategy, TrendStrategy}
 
 import scala.concurrent.duration
 import scala.concurrent.duration.Duration
@@ -14,11 +15,15 @@ import scala.concurrent.duration.Duration
 /**
   * Created by sgl on 10.04.16.
   */
-class TrendbotActor(symbol: String,
-                    indicatorService: IndicatorService,
-                    notificationService: NotificationService,
-                    configuration: Config
-                   ) extends Actor with LazyLogging {
+class TradeBotActor
+(
+  symbol: String,
+  strategy: TradeStrategy,
+  notificationService: NotificationService,
+  configuration: Config
+) extends Actor with LazyLogging {
+
+
   lazy val openAt = configuration.getDouble("trendbot.open-at")
   lazy val closeAt = configuration.getDouble("trendbot.close-at")
   lazy val timeFrame = configuration.getDuration("trend-factor.avg-time-frame", TimeUnit.SECONDS)
@@ -30,14 +35,8 @@ class TrendbotActor(symbol: String,
     val scheduleInterval = timeFrame/12
     context.system.scheduler.schedule(Duration.Zero, Duration(scheduleInterval, duration.SECONDS), self, DoAnalyze)
     logger.info(s"TrendBot actor started for $symbol with poll interval $scheduleInterval seconds")
-    if (configuration.hasPath("trendbot.notify-start") && configuration.getBoolean("trendbot.notify-start"))
+    if (configuration.hasPath("tradebot.notify-start") && configuration.getBoolean("tradebot.notify-start"))
     notificationService.notify(s"Started for $symbol")
-  }
-
-
-  @scala.throws[Exception](classOf[Exception])
-  override def postStop(): Unit = {
-    notificationService.notify(s"Stopped for $symbol")
   }
 
   var stateOpt: Option[Indicators] = None

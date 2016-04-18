@@ -5,8 +5,8 @@ package ru.osfb.trading.calculations
   */
 object Volatility {
   def sq(v: Double) = v*v
-  def apply(history: TradeHistory, time: Long, timeFrame: Long) = {
-    val mean = EMA(history, time, timeFrame)
+  def apply(time: Long, timeFrame: Long)(implicit history: TradeHistory) = {
+    val mean = EMA(time, timeFrame)
     history.range(time - timeFrame*5, time)
       .foldLeft((0.0, 0.0))((acc, trd) => {
         val coeff = Math.exp((time - trd.time).toDouble/timeFrame)

@@ -1,4 +1,4 @@
-package ru.osfb.trading.trendbot
+package ru.osfb.trading.tradebot
 
 import akka.http.scaladsl.server.Directives._
 import play.api.libs.json.Json

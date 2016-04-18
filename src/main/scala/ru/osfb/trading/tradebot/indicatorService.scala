@@ -1,4 +1,4 @@
-package ru.osfb.trading.trendbot
+package ru.osfb.trading.tradebot
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
@@ -36,8 +36,8 @@ trait IndicatorServiceComponent {   this: BitfinexExchangeComponent with Bitcoin
           else Future.successful(Nil)
       } yield {
         val vwapData = if (bitcoinchartsTrades.head.time - from > 3600) BfxData.loadVwapData(symbol, from, bitcoinchartsTrades.head.time - 1) else Nil
-        val history = new ArrayTradeHistory(vwapData ++ bitcoinchartsTrades ++ bitfinexTrades)
-        val TrendProperties(startPrice, endPrice, trendFactor) = TrendFactor(history, till - trendTimeSpan, till, avgTimeFrame)
+        implicit val history = new ArrayTradeHistory(vwapData ++ bitcoinchartsTrades ++ bitfinexTrades)
+        val TrendProperties(startPrice, endPrice, trendFactor) = TrendFactor(till - trendTimeSpan, till, avgTimeFrame)
         //val startVolatilityFactor = Volatility(history, from, avgTimeFrame) / Math.abs(endPrice - startPrice)
         logger.trace(s"Time: from ${Instant.ofEpochSecond(till - trendTimeSpan)} till ${Instant.ofEpochSecond(till)}, start price:$startPrice, end price: $endPrice, trend factor:$trendFactor")
         Indicators(startPrice, trendFactor)
