@@ -6,6 +6,8 @@ import akka.actor.Actor
 import akka.pattern.pipe
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import ru.osfb.trading.connectors.TradeHistoryService
+import ru.osfb.trading.feeds.{HistoryUpdateEvent, HistoryUpdateEventBus}
 import ru.osfb.trading.notification.NotificationService
 import ru.osfb.trading.strategies.{TradeStrategy, TrendStrategy}
 
@@ -17,33 +19,33 @@ import scala.concurrent.duration.Duration
   */
 class TradeBotActor
 (
+  exchange: String,
   symbol: String,
   strategy: TradeStrategy,
+  tradeHistoryService: TradeHistoryService,
   notificationService: NotificationService,
   configuration: Config
 ) extends Actor with LazyLogging {
 
 
-  lazy val openAt = configuration.getDouble("trendbot.open-at")
-  lazy val closeAt = configuration.getDouble("trendbot.close-at")
-  lazy val timeFrame = configuration.getDuration("trend-factor.avg-time-frame", TimeUnit.SECONDS)
-
   implicit def executionContext = context.dispatcher
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
-    val scheduleInterval = timeFrame/12
-    context.system.scheduler.schedule(Duration.Zero, Duration(scheduleInterval, duration.SECONDS), self, DoAnalyze)
-    logger.info(s"TrendBot actor started for $symbol with poll interval $scheduleInterval seconds")
-    if (configuration.hasPath("tradebot.notify-start") && configuration.getBoolean("tradebot.notify-start"))
-    notificationService.notify(s"Started for $symbol")
+    HistoryUpdateEventBus.subscribe(self, HistoryUpdateEvent(exchange, symbol))
+    logger.info(s"TradeBot actor started for $symbol at $exchange")
+    if (configuration.hasPath("tradebot.notify-start") && configuration.getBoolean("tradebot.notify-start")) {
+      notificationService.notify(s"Started for $symbol at $exchange")
+    }
   }
 
   var stateOpt: Option[Indicators] = None
 
   override def receive: Receive = {
-    case DoAnalyze =>
-      logger.trace("Polling")
+    case _:HistoryUpdateEvent =>
+      logger.trace("Analyzing new history records")
+      val now = System.currentTimeMillis() / 1000
+      tradeHistoryService.loadHistory(exchange, symbol, )
       indicatorService.computeIndicators(symbol) pipeTo self
     case newState@Indicators(price, trendFactor) =>
       for (state <- stateOpt) if (state.trendFactor <= openAt && newState.trendFactor > openAt) {

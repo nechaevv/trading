@@ -37,4 +37,6 @@ class TrendStrategy
       "trendFactor" -> trendFactor
     )
   }
+
+  override val historyDepth: Long = avgTimeFrame * 5 + timeFrame
 }

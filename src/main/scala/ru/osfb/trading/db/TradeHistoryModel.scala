@@ -8,16 +8,17 @@ import java.time.Instant
 object TradeHistoryModel {
   import ru.osfb.trading.PgDriver.api._
   class TradeHistoryTable(t:Tag) extends Table[TradeRecord](t, "TRADE_HISTORY") {
+    def exchange = column[String]("EXCHANGE")
     def symbol = column[String]("SYMBOL")
     def id = column[String]("ID")
     def time = column[Instant]("TIME")
     def price = column[BigDecimal]("PRICE")
     def quantity = column[BigDecimal]("QUANTITY")
-    def * = (symbol, id, time, price, quantity) <> (TradeRecord.tupled, TradeRecord.unapply)
-    def idx = index("TRADE_HISTORY_IDX", (symbol, time), unique = false)
-    def pk = primaryKey("TRADE_HISTORY_PK", (symbol,id))
+    def * = (exchange, symbol, id, time, price, quantity) <> (TradeRecord.tupled, TradeRecord.unapply)
+    def idx = index("TRADE_HISTORY_IDX", (exchange, symbol, time), unique = false)
+    def pk = primaryKey("TRADE_HISTORY_PK", (exchange, symbol, id))
   }
   val tradeHistoryTable = TableQuery[TradeHistoryTable]
 }
 
-case class TradeRecord(symbol: String, id: String, time: Instant, price: BigDecimal, quantity: BigDecimal)
+case class TradeRecord(exchange: String, symbol: String, id: String, time: Instant, price: BigDecimal, quantity: BigDecimal)

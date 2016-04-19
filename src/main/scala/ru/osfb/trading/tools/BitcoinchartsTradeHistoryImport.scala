@@ -23,7 +23,7 @@ object BitcoinchartsTradeHistoryImport extends App with LazyLogging {
   } {
     import ru.osfb.trading.TradingConfiguration.database
     val trades = batch map { line => line.split(",") match {
-      case Array(unixTimeStr, priceStr, qtyStr) => TradeRecord(symbol, "", Instant.ofEpochSecond(unixTimeStr.toLong), BigDecimal(priceStr), BigDecimal(qtyStr))
+      case Array(unixTimeStr, priceStr, qtyStr) => TradeRecord("bitcoincharts", symbol, "", Instant.ofEpochSecond(unixTimeStr.toLong), BigDecimal(priceStr), BigDecimal(qtyStr))
     } }
     import ru.osfb.trading.PgDriver.api._
     Await.ready((database run {

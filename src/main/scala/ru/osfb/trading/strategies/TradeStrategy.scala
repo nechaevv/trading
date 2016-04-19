@@ -11,6 +11,7 @@ trait TradeStrategy {
   def open(time: Long)(implicit history: TradeHistory): Option[PositionType]
   def close(time: Long, positionType: PositionType)(implicit history: TradeHistory): Boolean
   def indicators(time: Long)(implicit history: TradeHistory): JsObject
+  def historyDepth: Long
 }
 
 case class Position(time: Long, price: Double, quantity: Double, positionType: PositionType)
