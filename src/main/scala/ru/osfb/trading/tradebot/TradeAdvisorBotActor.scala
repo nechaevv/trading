@@ -6,10 +6,11 @@ import akka.actor.Actor
 import akka.pattern.pipe
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import ru.osfb.trading.calculations.{ArrayTradeHistory, Trade}
 import ru.osfb.trading.connectors.TradeHistoryService
 import ru.osfb.trading.feeds.{HistoryUpdateEvent, HistoryUpdateEventBus}
 import ru.osfb.trading.notification.NotificationService
-import ru.osfb.trading.strategies.{TradeStrategy, TrendStrategy}
+import ru.osfb.trading.strategies.{Position, TradeStrategy, TrendStrategy}
 
 import scala.concurrent.duration
 import scala.concurrent.duration.Duration
@@ -17,7 +18,7 @@ import scala.concurrent.duration.Duration
 /**
   * Created by sgl on 10.04.16.
   */
-class TradeBotActor
+class TradeAdvisorBotActor
 (
   exchange: String,
   symbol: String,
@@ -27,6 +28,7 @@ class TradeBotActor
   configuration: Config
 ) extends Actor with LazyLogging {
 
+  val name = self.path.name
 
   implicit def executionContext = context.dispatcher
 
@@ -40,24 +42,28 @@ class TradeBotActor
   }
 
   var stateOpt: Option[Indicators] = None
+  var position: Option[Position] = None
 
   override def receive: Receive = {
     case _:HistoryUpdateEvent =>
       logger.trace("Analyzing new history records")
       val now = System.currentTimeMillis() / 1000
-      tradeHistoryService.loadHistory(exchange, symbol, )
-      indicatorService.computeIndicators(symbol) pipeTo self
-    case newState@Indicators(price, trendFactor) =>
-      for (state <- stateOpt) if (state.trendFactor <= openAt && newState.trendFactor > openAt) {
-        notificationService.notify(symbol + "Long - Open")
-      } else if (state.trendFactor >= -openAt && newState.trendFactor < -openAt) {
-        notificationService.notify(symbol + "Short - Open")
-      } else if (state.trendFactor >= closeAt && newState.trendFactor < closeAt) {
-        notificationService.notify(symbol + "Long - Close")
-      } else if (state.trendFactor <= -closeAt && newState.trendFactor > -closeAt) {
-        notificationService.notify(symbol + "Short - Close")
+      tradeHistoryService.loadLatest(exchange, symbol, strategy.historyDepth) pipeTo self
+    case historyRecords: Seq[Trade] if historyRecords.nonEmpty =>
+      implicit val history = new ArrayTradeHistory(historyRecords)
+      val lastTime = history.lastTime
+      val lastPrice = history.priceAt(lastTime)
+      position match {
+        case Some(pos) => if (strategy.close(lastTime, pos.positionType)) {
+          val openTime = lastTime - pos.time
+          notificationService.notify(s"${pos.positionType.toString} - Close (open at ${pos.price}, close at $lastPrice, opened for )")
+          position = None
+        }
+        case None => strategy.open(lastTime) foreach { positionType =>
+          notificationService.notify(s"${positionType.toString} - Open ($lastPrice)")
+          position = Some(Position(lastTime, lastPrice, 1, positionType))
+        }
       }
-      stateOpt = Some(newState)
   }
 }
 

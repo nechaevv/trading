@@ -13,7 +13,7 @@ object TradeBot extends App with LazyLogging {
 
   httpServer.start(indicatorController)
 
-  actorSystem.actorOf(Props(classOf[TradeBotActor],
+  actorSystem.actorOf(Props(classOf[TradeAdvisorBotActor],
     configuration.getString("tradebot.symbol"), indicatorService, notificationService, configuration))
 
   Runtime.getRuntime.addShutdownHook(new Thread {
