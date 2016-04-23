@@ -1,6 +1,6 @@
 package ru.osfb.trading.connectors
 
-import ru.osfb.trading.db.PositionRecord
+import ru.osfb.trading.db.Position
 
 import scala.concurrent.Future
 
@@ -8,7 +8,7 @@ import scala.concurrent.Future
   * Created by v.a.nechaev on 20.04.2016.
   */
 trait PositionsService {
-  def findOpenPositions(actorId: String): Future[Seq[PositionRecord]]
+  def findOpenPositions(actorId: String): Future[Seq[Position]]
   def open(actorId: String, price: BigDecimal, quantity: BigDecimal): Future[Long]
   def close(id: Long, actorId: String, price: BigDecimal): Future[Unit]
 }

@@ -14,8 +14,6 @@ trait TradeStrategy {
   def historyDepth: Long
 }
 
-case class Position(time: Long, price: Double, quantity: Double, positionType: PositionType)
-
 object PositionType extends Enumeration {
   type PositionType = Value
   val Long = Value("L")

@@ -9,7 +9,7 @@ import ru.osfb.trading.strategies.PositionType.PositionType
   */
 object PositionModel {
   import ru.osfb.trading.PgDriver.api._
-  class PositionTable(t: Tag) extends Table[PositionRecord](t, "POSITIONS") {
+  class PositionTable(t: Tag) extends Table[Position](t, "POSITIONS") {
     def id = column[Long]("ID", O.PrimaryKey, O.AutoInc)
     def actorId = column[String]("ACTOR_ID")
     def quantity = column[BigDecimal]("QUANTITY")
@@ -18,17 +18,18 @@ object PositionModel {
     def openPrice = column[BigDecimal]("OPEN_PRICE")
     def closedAt = column[Option[Instant]]("CLOSED_AT")
     def closePrice = column[Option[BigDecimal]]("CLOSE_PRICE")
-    def * = (id.?, actorId, quantity, positionType, openedAt, openPrice, closedAt, closePrice) <> (PositionRecord.tupled, PositionRecord.unapply)
+    def * = (id.?, actorId, quantity, positionType, openedAt, openPrice, closedAt, closePrice) <> (Position.tupled, Position.unapply)
     def actorIdx = index("POSITIONS_ACTOR_IDX", actorId, unique = false)
   }
   val positionsTable = TableQuery[PositionTable]
 }
 
-case class PositionRecord
+case class Position
 (
-  id: Option[Int],
+  id: Option[Long],
   actorId: String,
   quantity: BigDecimal,
+  positionType: PositionType,
   openedAt: Instant,
   openPrice: BigDecimal,
   closedAt: Option[Instant],
