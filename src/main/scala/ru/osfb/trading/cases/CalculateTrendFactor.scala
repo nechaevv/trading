@@ -24,8 +24,8 @@ object CalculateTrendFactor extends App with LazyLogging {
   //val history = new TreeTradeHistory(trades)
 
 
-  val from = toInstant(args(1))//.toEpochMilli / 1000
-  val till = toInstant(args(2))//.toEpochMilli / 1000
+  val from = toInstant(args(1))
+  val till = toInstant(args(2))
   val fromSec = from.toEpochMilli / 1000
   val tillSec = till.toEpochMilli / 1000
   val timeQuantum = args(3).toLong

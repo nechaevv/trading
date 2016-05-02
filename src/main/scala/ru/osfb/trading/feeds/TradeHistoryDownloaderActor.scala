@@ -46,6 +46,7 @@ class TradeHistoryDownloaderActor (
           logger.info(s"Updated $result trade history records for ${feed.symbol} from ${feed.exchange}")
           HistoryUpdateEventBus.publish(HistoryUpdateEvent(feed.exchange, feed.symbol))
           self ! LoadCompleted(trades.head.time.toEpochMilli / 1000)
+        case _ => ()
       }
     }
     case LoadCompleted(lastTime) => from = Math.max(from, lastTime)

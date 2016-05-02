@@ -6,9 +6,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import play.api.libs.json.Json
-import ru.osfb.trading.db.TradeRecord
+import ru.osfb.trading.db.{TradeRecord, TradeType}
 import ru.osfb.webapi.core.{ActorMaterializerComponent, ActorSystemComponent, ExecutionContextComponent}
 import ru.osfb.webapi.http.PlayJsonMarshallers._
+
 import scala.concurrent.Future
 
 /**
@@ -22,7 +23,13 @@ class BitfinexTradeFeed(val symbol: String) extends TradeFeed{ this: ActorSystem
   override def poll(from: Long): Future[Seq[TradeRecord]] = {
     Http().singleRequest(HttpRequest(uri = s"https://api.bitfinex.com/v1/trades/$symbol?timestamp=$from"))
       .flatMap(resp => Unmarshal(resp.entity).to[Seq[BitfinexTrade]])
-      .map(_.map(t => TradeRecord(exchange, symbol, t.tid.toString, Instant.ofEpochSecond(t.timestamp), BigDecimal(t.price), BigDecimal(t.amount))))
+      .map(_.map(t => {
+        val tt = t.`type` match {
+          case "sell" => TradeType.Sell
+          case "buy" => TradeType.Buy
+        }
+        TradeRecord(exchange, symbol, t.tid.toString, Instant.ofEpochSecond(t.timestamp), BigDecimal(t.price), BigDecimal(t.amount), tt)
+      }))
   }
 
 }

@@ -23,11 +23,15 @@ trait DbHistoryServiceComponentImpl extends TradeHistoryServiceComponent { this:
       tradeHistoryTable.filter(t => t.exchange === exchange && t.symbol === symbol && t.time.between(Instant.ofEpochSecond(from),Instant.ofEpochSecond(till)))
     }
 
-    override def loadLatest(exchange: String, symbol: String, depth: Long): Future[Seq[Trade]] = database run {
+    override def loadLatest(exchange: String, symbol: String, depth: Long): Future[Seq[Trade]] = {
       val q = tradeHistoryTable.filter(t => t.exchange === exchange && t.symbol === symbol)
-      q.map(_.time).max.result.flatMap {
-        case Some(maxTime) => runQuery(q.filter(_.time >= maxTime.minusSeconds(depth)))
-        case None => DBIOAction.successful(Nil)
+      database run {
+        q.map(_.time).max.result
+      } flatMap {
+        case Some(maxTime) => database run {
+          runQuery(q.filter(_.time >= maxTime.minusSeconds(depth)))
+        }
+        case None => Future.successful(Seq.empty[Trade])
       }
     }
 

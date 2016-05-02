@@ -3,7 +3,7 @@ package ru.osfb.trading.tools
 import java.time.Instant
 
 import com.typesafe.scalalogging.LazyLogging
-import ru.osfb.trading.db.TradeRecord
+import ru.osfb.trading.db.{TradeRecord, TradeType}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -23,7 +23,7 @@ object BitcoinchartsTradeHistoryImport extends App with LazyLogging {
   } {
     import ru.osfb.trading.TradingConfiguration.database
     val trades = batch map { line => line.split(",") match {
-      case Array(unixTimeStr, priceStr, qtyStr) => TradeRecord("bitcoincharts", symbol, "", Instant.ofEpochSecond(unixTimeStr.toLong), BigDecimal(priceStr), BigDecimal(qtyStr))
+      case Array(unixTimeStr, priceStr, qtyStr) => TradeRecord("bitcoincharts", symbol, "", Instant.ofEpochSecond(unixTimeStr.toLong), BigDecimal(priceStr), BigDecimal(qtyStr), TradeType.Sell)
     } }
     import ru.osfb.trading.PgDriver.api._
     Await.ready((database run {

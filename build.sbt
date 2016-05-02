@@ -13,7 +13,7 @@ val slickPgVersion = "0.12.0"
 libraryDependencies ++= Seq(
   "ru.osfb.webapi" %% "api-framework" % "0.1-SNAPSHOT",
   "ch.qos.logback" % "logback-classic" % "1.1.3",
-  "org.postgresql" % "postgresql" % "9.4.1207",
+  "org.postgresql" % "postgresql" % "9.4.1208",
   "com.typesafe.slick" %% "slick-hikaricp" % "3.1.1",
   "com.zaxxer" % "HikariCP" % "2.4.1",
   "com.github.tminglei" %% "slick-pg" % slickPgVersion,

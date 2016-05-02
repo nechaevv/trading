@@ -9,6 +9,9 @@ import ru.osfb.trading.db.TradeType.TradeType
   */
 object TradeHistoryModel {
   import ru.osfb.trading.PgDriver.api._
+  implicit val tradeTypeColumnType = MappedColumnType.base[TradeType, String](
+    {tt => tt.toString}, {s => TradeType.withName(s)}
+  )
   class TradeHistoryTable(t:Tag) extends Table[TradeRecord](t, "TRADE_HISTORY") {
     def exchange = column[String]("EXCHANGE")
     def symbol = column[String]("SYMBOL")
