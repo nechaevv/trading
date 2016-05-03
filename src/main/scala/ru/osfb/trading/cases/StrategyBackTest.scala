@@ -7,6 +7,7 @@ import ru.osfb.trading.calculations.TradeHistory
 import ru.osfb.trading.strategies.PositionType.PositionType
 import ru.osfb.trading.strategies.{PositionType, TradeStrategy}
 
+import scala.collection.immutable.NumericRange
 import scala.collection.parallel.ParSeq
 
 /**
@@ -21,12 +22,12 @@ class StrategyBackTest extends LazyLogging {
           case None => acc
           case Some(positionType) =>
             val price = history.priceAt(time)
-            logger.info(s"Opening $positionType position at $price on ${Instant.ofEpochSecond(time)}")
+            //logger.info(s"Opening $positionType position at $price on ${Instant.ofEpochSecond(time)}")
             RunState(Some(BacktestPosition(time, price, positionType)), stat)
         }
         case Some(position) => if (strategy.close(time, position.positionType)) {
           val price = history.priceAt(time)
-          logger.info(s"Closing ${position.positionType} position at $price on ${Instant.ofEpochSecond(time)}")
+          //logger.info(s"Closing ${position.positionType} position at $price on ${Instant.ofEpochSecond(time)}")
           val profit = (position.positionType match {
             case PositionType.Long => price - position.openPrice
             case PositionType.Short => position.openPrice - price
@@ -43,10 +44,9 @@ class StrategyBackTest extends LazyLogging {
     val zeroStatistics = PositionStatistics(0,0,0)
     (from to till by timeStep).foldLeft(RunState(None, BacktestStatistics(zeroStatistics,zeroStatistics)))(foldFn).statistics
   }
-  def optimize(strategyFactory: Double => TradeStrategy, paramFrom: Double, paramTo: Double, paramStep: Double,
-               from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(Double, Double)] = {
-    val paramValues = paramFrom to paramTo by paramStep
-    paramValues.par.map(param => run(strategyFactory(param),from, till, timeStep) match {
+  def optimize[T](strategyFactory: T => TradeStrategy, params: Seq[T],
+               from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(T, Double)] = {
+    params.par.map(param => run(strategyFactory(param),from, till, timeStep) match {
       case BacktestStatistics(succeeded, failed) => param -> (succeeded.profit + failed.profit)
     })
   }

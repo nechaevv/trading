@@ -5,7 +5,7 @@ import java.time.{Instant, LocalDateTime, ZoneId}
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations.ArrayTradeHistory
-import ru.osfb.trading.connectors.CsvHistoryStore
+import ru.osfb.trading.connectors.{BfxData, CsvHistoryStore}
 import ru.osfb.trading.strategies.TrendStrategy
 
 import scala.concurrent.Await
@@ -31,6 +31,7 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val strategy = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, closeFactor)
   val fetchTimeStart = from minusSeconds (timeFrame * (1.0/avgTimeFactor + 1.0)).toLong
   val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
+  //val trades = BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
   implicit val history = new ArrayTradeHistory(trades)
 
   val runner = new StrategyBackTest
