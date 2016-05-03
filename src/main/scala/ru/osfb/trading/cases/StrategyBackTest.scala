@@ -7,16 +7,18 @@ import ru.osfb.trading.calculations.TradeHistory
 import ru.osfb.trading.strategies.PositionType.PositionType
 import ru.osfb.trading.strategies.{PositionType, TradeStrategy}
 
+import scala.collection.parallel.ParSeq
+
 /**
   * Created by sgl on 02.05.16.
   */
-class StrategyBackTest(strategy: TradeStrategy) extends LazyLogging {
-  def run(from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):BacktestStatistics = {
+class StrategyBackTest extends LazyLogging {
+  def run(strategy: TradeStrategy, from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):BacktestStatistics = {
     case class RunState(openPosition: Option[BacktestPosition], statistics: BacktestStatistics)
     def foldFn(acc: RunState, time: Long) = acc match {
       case RunState(pos, stat) => pos match {
         case None => strategy.open(time) match {
-          case None => RunState(None,stat)
+          case None => acc
           case Some(positionType) =>
             val price = history.priceAt(time)
             logger.info(s"Opening $positionType position at $price on ${Instant.ofEpochSecond(time)}")
@@ -30,21 +32,26 @@ class StrategyBackTest(strategy: TradeStrategy) extends LazyLogging {
             case PositionType.Short => position.openPrice - price
           }) / position.openPrice
           val newStat = if (profit > 0) BacktestStatistics(PositionStatistics(
-            stat.succeded.count + 1, stat.succeded.profit + profit, stat.succeded.time + time - position.openTime
-          ), stat.failed) else BacktestStatistics(stat.succeded, PositionStatistics(
+            stat.succeeded.count + 1, stat.succeeded.profit + profit, stat.succeeded.time + time - position.openTime
+          ), stat.failed) else BacktestStatistics(stat.succeeded, PositionStatistics(
             stat.failed.count + 1, stat.failed.profit + profit, stat.failed.time + time - position.openTime
           ))
           RunState(None, newStat)
-        } else RunState(Some(position), stat)
+        } else acc
       }
-
-
     }
     val zeroStatistics = PositionStatistics(0,0,0)
     (from to till by timeStep).foldLeft(RunState(None, BacktestStatistics(zeroStatistics,zeroStatistics)))(foldFn).statistics
+  }
+  def optimize(strategyFactory: Double => TradeStrategy, paramFrom: Double, paramTo: Double, paramStep: Double,
+               from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(Double, Double)] = {
+    val paramValues = paramFrom to paramTo by paramStep
+    paramValues.par.map(param => run(strategyFactory(param),from, till, timeStep) match {
+      case BacktestStatistics(succeeded, failed) => param -> (succeeded.profit + failed.profit)
+    })
   }
 }
 
 case class BacktestPosition(openTime: Long, openPrice: Double, positionType: PositionType)
 case class PositionStatistics(count: Int, profit: Double, time: Long)
-case class BacktestStatistics(succeded: PositionStatistics, failed: PositionStatistics)
+case class BacktestStatistics(succeeded: PositionStatistics, failed: PositionStatistics)

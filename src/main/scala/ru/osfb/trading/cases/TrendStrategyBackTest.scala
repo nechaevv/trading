@@ -33,15 +33,15 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   implicit val history = new ArrayTradeHistory(trades)
 
-  val runner = new StrategyBackTest(strategy)
+  val runner = new StrategyBackTest
 
   logger.info(s"Running backtest from $from till $till")
-  val stat = runner.run(fromSec, tillSec, timeFrame / (6 * avgTimeFactor))
+  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / (6 * avgTimeFactor))
 
   logger.info("Backtest completed")
-  logger.info(s"Succeded: ${stat.succeded.count} trades with ${stat.succeded.profit * 100}% profit, avg time: ${stat.succeded.time / (86400 * stat.succeded.count)} days")
+  logger.info(s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days")
   logger.info(s"Failed: ${stat.failed.count} trades with ${stat.failed.profit * 100}% loss, avg time: ${stat.failed.time / (86400 * stat.failed.count)} days")
-  logger.info(s"Total: ${stat.succeded.count + stat.failed.count} trades with ${(stat.succeded.profit + stat.failed.profit) * 100}% profit" +
-    s", avg time: ${(stat.succeded.time + stat.failed.time) / (86400 * (stat.succeded.count + stat.failed.count))} days")
+  logger.info(s"Total: ${stat.succeeded.count + stat.failed.count} trades with ${(stat.succeeded.profit + stat.failed.profit) * 100}% profit" +
+    s", avg time: ${(stat.succeeded.time + stat.failed.time) / (86400 * (stat.succeeded.count + stat.failed.count))} days")
 
 }
