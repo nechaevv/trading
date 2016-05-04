@@ -38,7 +38,7 @@ object TrendStrategyOptimizer extends App with LazyLogging {
   logger.info(s"Running backtest from $from till $till")
   //Time frame
   def strategyFactory(param: Long) = new TrendStrategy(param, avgTimeFactor, openFactor, closeFactor)
-  val stat = runner.optimize(strategyFactory, 50000L to 1000000L by 5000L, fromSec, tillSec, 3600)
+  val stat = runner.optimize(strategyFactory, 50000L to 1000000L by 5000L, fromSec, tillSec, 3600, timeFrame / avgTimeFactor)
   //Avg time factor
   //def strategyFactory(param: Long) = new TrendStrategy(timeFrame, param, openFactor, closeFactor)
   //val stat = runner.optimize(strategyFactory, 10L to 200L by 1L, fromSec, tillSec, 3600)

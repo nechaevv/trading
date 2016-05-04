@@ -37,7 +37,7 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val runner = new StrategyBackTest
 
   logger.info(s"Running backtest from $from till $till")
-  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / (6 * avgTimeFactor))
+  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / (6 * avgTimeFactor), timeFrame/avgTimeFactor)
 
   logger.info("Backtest completed")
   logger.info(s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days")
