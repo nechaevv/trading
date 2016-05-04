@@ -2,6 +2,7 @@ package ru.osfb.trading.tradebot
 
 import akka.actor.Props
 import com.typesafe.scalalogging.LazyLogging
+import ru.osfb.trading.feeds.TradeHistoryDownloaderActor
 
 /**
   * Created by sgl on 09.04.16.
@@ -14,7 +15,12 @@ object TradeBot extends App with LazyLogging {
   httpServer.start(indicatorController)
 
   actorSystem.actorOf(Props(classOf[TradeAdvisorBotActor],
-    configuration.getString("tradebot.symbol"), indicatorService, notificationService, configuration))
+    configuration.getString("tradebot.exchange"),
+    configuration.getString("tradebot.symbol"),
+    indicatorService,
+    notificationService,
+    configuration))
+  actorSystem.actorOf(Props(classOf[TradeHistoryDownloaderActor], bitfinexTradeFeed))
 
   Runtime.getRuntime.addShutdownHook(new Thread {
     override def run(): Unit = {
