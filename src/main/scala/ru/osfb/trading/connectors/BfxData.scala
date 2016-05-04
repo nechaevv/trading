@@ -20,9 +20,9 @@ object BfxData extends LazyLogging {
         (time >= fromStr) && (time <= tillStr)
       }).map(_.split(",") match {
       case Array(timeStr, _, priceStr, volumeStr) => Trade(timeStr.toLong, priceStr.toDouble * volumeStr.toDouble, volumeStr.toDouble)
-    }).toSeq.reverse
+    }).filter(_.quantity > 0).toSeq.reverse
     logger.info(s"Loaded ${trades.length} vwap records as trades" +
-      (if (trades.isEmpty) "" else s"from ${trades.head.time} (${Instant.ofEpochSecond(trades.head.time)})" +
+      (if (trades.isEmpty) "" else s" from ${trades.head.time} (${Instant.ofEpochSecond(trades.head.time)})" +
       s" till ${trades.last.time} (${Instant.ofEpochSecond(trades.last.time)})"))
     trades
   }

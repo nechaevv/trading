@@ -11,8 +11,10 @@ import ru.osfb.trading.connectors.{PositionsService, TradeHistoryService}
 import ru.osfb.trading.db.Position
 import ru.osfb.trading.feeds.{HistoryUpdateEvent, HistoryUpdateEventBus}
 import ru.osfb.trading.notification.NotificationService
-import ru.osfb.trading.strategies.TradeStrategy
+import ru.osfb.trading.strategies.{PositionOrder, TradeStrategy}
 import ru.osfb.trading.tradebot.TradeAdvisorBotActor.{DoAnalyze, InitPosition}
+
+import scala.concurrent.duration._
 
 /**
   * Created by sgl on 10.04.16.
@@ -62,15 +64,23 @@ class TradeAdvisorBotActor
       val lastPrice = history.priceAt(lastTime)
       //TODO: stash history update events while position is closing/opening
       position match {
-        case Some(pos) => if (strategy.close(lastTime, pos.positionType)) {
-          val openTime = lastTime - pos.openedAt.getEpochSecond
-          notificationService.notify(s"${pos.positionType.toString} - Close (open at ${pos.openedAt}, close at $lastPrice, opened for $openTime s)")
-          positionsService.close(pos.id.get, name, lastPrice)
-          position = None
+        case Some(pos) => strategy.close(lastTime, pos.positionType) foreach {
+          case PositionOrder(price, executionTime) =>
+            val openTime = lastTime - pos.openedAt.getEpochSecond
+            notificationService.notify(s"${pos.positionType.toString} - Close at $price")
+            context.system.scheduler.scheduleOnce(executionTime.seconds) {
+              notificationService.notify(s"${pos.positionType.toString} - Close immidiately")
+            }
+            positionsService.close(pos.id.get, name, lastPrice)
+            position = None
         }
-        case None => strategy.open(lastTime) foreach { positionType =>
-          notificationService.notify(s"${positionType.toString} - Open ($lastPrice)")
-          positionsService.open(name, lastPrice, 1)
+        case None => strategy.open(lastTime) foreach {
+          case (positionType, PositionOrder(price, executionTime)) =>
+            notificationService.notify(s"${positionType.toString} - Open at $lastPrice")
+            context.system.scheduler.scheduleOnce(executionTime.seconds) {
+              notificationService.notify(s"${positionType.toString} - Open immidiately")
+            }
+            positionsService.open(name, lastPrice, 1)
               .map(posId => InitPosition(Some(Position(
                 Some(posId), name, 1, positionType, Instant.ofEpochSecond(lastTime), lastPrice, None, None
               )))) pipeTo self

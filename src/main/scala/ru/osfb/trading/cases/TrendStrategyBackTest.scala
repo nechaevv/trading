@@ -27,8 +27,9 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val avgTimeFactor = args(4).toLong
   val openFactor = args(5).toDouble
   val closeFactor = args(6).toDouble
+  val orderVolFactor = args(7).toDouble
 
-  val strategy = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, closeFactor)
+  val strategy = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, closeFactor, orderVolFactor, timeFrame / avgTimeFactor)
   val fetchTimeStart = from minusSeconds (timeFrame * (1.0/avgTimeFactor + 1.0)).toLong
   val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   //val trades = BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
@@ -37,7 +38,7 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val runner = new StrategyBackTest
 
   logger.info(s"Running backtest from $from till $till")
-  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / (6 * avgTimeFactor), timeFrame/avgTimeFactor)
+  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / (6 * avgTimeFactor))
 
   logger.info("Backtest completed")
   logger.info(s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days")
