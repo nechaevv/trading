@@ -1,5 +1,6 @@
 package ru.osfb.trading.cases
 
+import java.io.FileWriter
 import java.time.{Instant, LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
 
@@ -44,8 +45,8 @@ object TrendStrategyOptimizer extends App with LazyLogging {
   //def strategyFactory(param: Long) = new TrendStrategy(timeFrame, param, openFactor, closeFactor, orderVolFactor, timeFrame / param)
   //val stat = runner.optimize(strategyFactory, 10L to 200L by 1L, fromSec, tillSec, 3600)
   //Open factor
-  //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, avgTimeFactor, param, closeFactor, orderVolFactor, timeFrame / avgTimeFactor)
-  //val stat = runner.optimize(strategyFactory, 0.5 to 5.0 by 0.001, fromSec, tillSec, 3600)
+  //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, avgTimeFactor, param, closeFactor, orderVolFactor, 3600)// timeFrame / avgTimeFactor)
+  //val stat = runner.optimize(strategyFactory, -0.5 to 5.0 by 0.001, fromSec, tillSec, 3600)
   //Close factor
   //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, param, orderVolFactor, timeFrame / avgTimeFactor)
   //val stat = runner.optimize(strategyFactory, -2.0 to 2.0 by 0.001, fromSec, tillSec, 3600)
@@ -63,9 +64,15 @@ object TrendStrategyOptimizer extends App with LazyLogging {
 
   val (maxParam, maxProfit) = stat.foldLeft((zeroParam, 0.0))((acc, v) => {
     val (_, maxProfit) = acc
-    val (_, profit) = v
-    if (profit > maxProfit) v else acc
+    val (param, stat) = v
+    val profit = stat.succeeded.profit + stat.failed.profit
+    if (profit > maxProfit) (param, profit) else acc
   })
+  val fw = new FileWriter("optimize.csv")
+  stat.seq.sortBy(_._1) foreach {
+    case (param, stat) => fw.write((param.toString + ";" + (stat.succeeded.profit + stat.failed.profit).toString + ";" + (stat.succeeded.count + stat.failed.count).toString).replace(".",",") + "\n")
+  }
+  fw.close()
 
   logger.info(s"Top profit: ${maxProfit*100}% on $maxParam")
 

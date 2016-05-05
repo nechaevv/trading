@@ -57,10 +57,8 @@ class StrategyBackTest extends LazyLogging {
     (from to till by timeStep).foldLeft(RunState(None, BacktestStatistics(zeroStatistics,zeroStatistics)))(foldFn).statistics
   }
   def optimize[T](strategyFactory: T => TradeStrategy, params: Seq[T],
-               from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(T, Double)] = {
-    params.par.map(param => run(strategyFactory(param),from, till, timeStep) match {
-      case BacktestStatistics(succeeded, failed) => param -> (succeeded.profit + failed.profit)
-    })
+               from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(T, BacktestStatistics)] = {
+    params.par.map(param => param -> run(strategyFactory(param),from, till, timeStep))
   }
 
 }
