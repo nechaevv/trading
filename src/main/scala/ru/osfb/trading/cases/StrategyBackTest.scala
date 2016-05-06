@@ -4,6 +4,8 @@ import java.time.Instant
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations.{TradeHistory, Volatility}
+import ru.osfb.trading.db.TradeType
+import ru.osfb.trading.db.TradeType.TradeType
 import ru.osfb.trading.strategies.PositionType.PositionType
 import ru.osfb.trading.strategies.{PositionOrder, PositionType, TradeStrategy}
 
@@ -20,24 +22,22 @@ class StrategyBackTest extends LazyLogging {
       case RunState(pos, stat) => pos match {
         case None => strategy.open(time) match {
           case None => acc
-          case Some((positionType, PositionOrder(orderPrice, executionTime))) =>
+          case Some((positionType, po)) =>
             //val price = history.priceAt(time)
-            val execStat = history.periodStatistics(time, time + executionTime)
-            val price = positionType match {
-              case PositionType.Long => if (execStat.min < orderPrice) orderPrice else execStat.close
-              case PositionType.Short => if (execStat.max > orderPrice) orderPrice else execStat.close
-            }
+            val price = executeOrder(time, positionType match {
+              case PositionType.Long => TradeType.Buy
+              case PositionType.Short => TradeType.Sell
+            }, po)
             //logger.info(s"Opening $positionType position at $price on ${Instant.ofEpochSecond(time)}")
             RunState(Some(BacktestPosition(time, price, positionType)), stat)
         }
         case Some(position) => strategy.close(time, position.positionType) match {
-          case Some(PositionOrder(orderPrice, executionTime)) =>
+          case Some(po) =>
             //val price = history.priceAt(time)
-            val execStat = history.periodStatistics(time, time + executionTime)
-            val price = position.positionType match {
-              case PositionType.Long => if (execStat.max > orderPrice) orderPrice else execStat.close
-              case PositionType.Short => if (execStat.min < orderPrice) orderPrice else execStat.close
-            }
+            val price = executeOrder(time, position.positionType match {
+              case PositionType.Long => TradeType.Sell
+              case PositionType.Short => TradeType.Buy
+            }, po)
             //logger.info(s"Closing ${position.positionType} position at $price on ${Instant.ofEpochSecond(time)}")
             val profit = (position.positionType match {
               case PositionType.Long => price - position.openPrice
@@ -59,6 +59,16 @@ class StrategyBackTest extends LazyLogging {
   def optimize[T](strategyFactory: T => TradeStrategy, params: Seq[T],
                from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(T, BacktestStatistics)] = {
     params.par.map(param => param -> run(strategyFactory(param),from, till, timeStep))
+  }
+
+  def executeOrder(time: Long, orderType: TradeType, po: PositionOrder)(implicit history: TradeHistory):Double = {
+    val execStat = history.periodStatistics(time, time + po.executionTime)
+    val price = orderType match {
+      case TradeType.Buy => if (execStat.min <= po.price) po.price else execStat.close
+      case TradeType.Sell => if (execStat.max >= po.price) po.price else execStat.close
+    }
+    //logger.info(s"${Instant.ofEpochSecond(time)} Order $orderType executed at $price ${if(price == po.price) "HIT" else "MISS"}, diff: ${price - execStat.open}")
+    price
   }
 
 }

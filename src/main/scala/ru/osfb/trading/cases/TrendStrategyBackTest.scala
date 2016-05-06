@@ -28,8 +28,9 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val openFactor = args(5).toDouble
   val closeFactor = args(6).toDouble
   val orderVolFactor = args(7).toDouble
+  val orderExecTimeFactor = args(8).toDouble
 
-  val strategy = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, closeFactor, orderVolFactor, timeFrame / avgTimeFactor)
+  val strategy = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, closeFactor, orderVolFactor, (orderExecTimeFactor * timeFrame / avgTimeFactor).toLong)
   val fetchTimeStart = from minusSeconds (timeFrame * (1.0/avgTimeFactor + 1.0)).toLong
   val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   //val trades = BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)

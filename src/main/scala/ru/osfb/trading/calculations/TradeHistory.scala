@@ -13,9 +13,9 @@ trait TradeHistory {
     val priceHistory = range(from, till)
     val open = if(priceHistory.isEmpty) priceAt(from) else priceHistory.head.price
     val close = if(priceHistory.isEmpty) priceAt(till) else priceHistory.last.price
-    priceHistory.foldLeft(PeriodStatistics(open, close, if (open>close) close else open, if (open>close) open else close, 0.0))((acc, trade) => {
+    priceHistory.foldLeft(PeriodStatistics(open, close, Math.min(open,close), Math.max(open,close), 0.0))((acc, trade) => {
       val price = trade.price
-      acc.copy(min = if (price < acc.min) price else acc.min, max = if (price > acc.max) price else acc.max, volume = acc.volume + trade.quantity)
+      acc.copy(min = Math.min(price, acc.min), max = Math.max(price, acc.max), volume = acc.volume + trade.quantity)
     })
   }
 }

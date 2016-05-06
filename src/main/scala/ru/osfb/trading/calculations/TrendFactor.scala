@@ -9,6 +9,7 @@ object TrendFactor {
   def sq(v: Double) = v*v
 
   def apply(from: Long, till: Long, avgTimeFrame: Long)(implicit history: TradeHistory): TrendProperties = {
+    //val startPrice = EMA(from, avgTimeFrame)
     val startPrice = EMA(from, avgTimeFrame)
     val endPrice = EMA(till, avgTimeFrame)
     val delta = endPrice - startPrice
