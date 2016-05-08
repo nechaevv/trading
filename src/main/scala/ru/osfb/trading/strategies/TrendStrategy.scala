@@ -1,6 +1,6 @@
 package ru.osfb.trading.strategies
 import play.api.libs.json.{JsObject, Json}
-import ru.osfb.trading.calculations.{TradeHistory, TrendFactor, TrendProperties, Volatility}
+import ru.osfb.trading.calculations._
 import ru.osfb.trading.db.TradeType
 import ru.osfb.trading.db.TradeType.TradeType
 import ru.osfb.trading.strategies.PositionType.PositionType
@@ -11,47 +11,53 @@ import ru.osfb.trading.strategies.PositionType.PositionType
 class TrendStrategy
 (
   timeFrame: Long,
-  avgTimeFactor: Long,
+  localTimeFactor: Long,
+  localTrendFactor: Double,
   openFactor: Double,
   closeFactor: Double,
   orderVolFactor: Double,
-  orderExecutionTime: Long
+  orderExecutionTimeFactor: Long
 ) extends TradeStrategy {
-  val avgTimeFrame = timeFrame / avgTimeFactor
 
-  override def open(time: Long)(implicit history: TradeHistory): Option[(PositionType, PositionOrder)] = {
-    val trendFactor = TrendFactor(time - timeFrame, time, avgTimeFrame).factor
-    if (trendFactor > openFactor) Some(PositionType.Long, orderProps(time, TradeType.Buy))
-    else if (trendFactor < -openFactor) Some(PositionType.Short, orderProps(time, TradeType.Sell))
+  override type StrategyIndicators = TrendIndicators
+
+  override def open(indicators: TrendIndicators): Option[(PositionType, PositionOrder)] = {
+    val trendFactor = (1.0 - localTrendFactor)*indicators.trend + localTrendFactor*indicators.localTrend
+    if (trendFactor > openFactor) Some(PositionType.Long, orderProps(indicators, TradeType.Buy))
+    else if (trendFactor < -openFactor) Some(PositionType.Short, orderProps(indicators, TradeType.Sell))
     else None
   }
 
-  override def close(time: Long, positionType: PositionType)(implicit history: TradeHistory): Option[PositionOrder] = {
-    val trendFactor = TrendFactor(time - timeFrame, time, avgTimeFrame).factor
+  override def close(indicators: TrendIndicators, positionType: PositionType): Option[PositionOrder] = {
+    val trendFactor = (1.0 - localTrendFactor)*indicators.trend + localTrendFactor*indicators.localTrend
     positionType match {
-      case PositionType.Long if trendFactor < closeFactor => Some(orderProps(time, TradeType.Sell))
-      case PositionType.Short if trendFactor > -closeFactor => Some(orderProps(time, TradeType.Buy))
+      case PositionType.Long if trendFactor < closeFactor => Some(orderProps(indicators, TradeType.Sell))
+      case PositionType.Short if trendFactor > -closeFactor => Some(orderProps(indicators, TradeType.Buy))
       case _ => None
     }
   }
 
-  def orderProps(time: Long, tradeType: TradeType)(implicit history: TradeHistory) = {
-    val pricediff = Volatility(time, orderExecutionTime) * orderVolFactor
+  override def indicators(time: Long)(implicit history: TradeHistory): TrendIndicators = TrendIndicators(
+    time,
+    CovarianceTrendFactor(time, timeFrame),
+    CovarianceTrendFactor(time, localTimeFrame),
+    Volatility(time, orderExecutionTime),
+    history.priceAt(time)
+  )
+
+  override val historyDepth: Long = timeFrame * 5
+
+  protected def orderProps(indicators: TrendIndicators, tradeType: TradeType) = {
+    val pricediff = indicators.execVolatility * orderVolFactor
     val orderPrice = tradeType match {
-      case TradeType.Buy => history.priceAt(time) - pricediff
-      case TradeType.Sell => history.priceAt(time) + pricediff
+      case TradeType.Buy => indicators.price - pricediff
+      case TradeType.Sell => indicators.price + pricediff
     }
     PositionOrder(orderPrice, orderExecutionTime)
   }
-
-  override def indicators(time: Long)(implicit history: TradeHistory): JsObject = TrendFactor(time - timeFrame, time, avgTimeFrame) match {
-    case TrendProperties(startPrice, endPrice, trendFactor) => Json.obj(
-      "startPrice" -> startPrice,
-      "endPrice" -> endPrice,
-      "trendFactor" -> trendFactor
-    )
-  }
-
-  override val historyDepth: Long = avgTimeFrame * 5 + timeFrame
+  protected val localTimeFrame = timeFrame / localTimeFactor
+  protected val orderExecutionTime = timeFrame / orderExecutionTimeFactor
 
 }
+
+case class TrendIndicators(time: Long, trend: Double, localTrend: Double, execVolatility: Double, price: Double) extends TradeIndicators

@@ -1,17 +1,16 @@
 package ru.osfb.trading.strategies
 
-import play.api.libs.json.JsObject
 import ru.osfb.trading.calculations.TradeHistory
-import ru.osfb.trading.db.TradeType.TradeType
 import ru.osfb.trading.strategies.PositionType.PositionType
 
 /**
   * Created by sgl on 18.04.16.
   */
 trait TradeStrategy {
-  def open(time: Long)(implicit history: TradeHistory): Option[(PositionType, PositionOrder)]
-  def close(time: Long, positionType: PositionType)(implicit history: TradeHistory): Option[PositionOrder]
-  def indicators(time: Long)(implicit history: TradeHistory): JsObject
+  type StrategyIndicators <: TradeIndicators
+  def open(indicators: StrategyIndicators): Option[(PositionType, PositionOrder)]
+  def close(indicators: StrategyIndicators, positionType: PositionType): Option[PositionOrder]
+  def indicators(time: Long)(implicit history: TradeHistory): StrategyIndicators
   def historyDepth: Long
 }
 
@@ -22,3 +21,7 @@ object PositionType extends Enumeration {
 }
 
 case class PositionOrder(price: Double, executionTime: Long)
+
+trait TradeIndicators {
+  def time: Long
+}

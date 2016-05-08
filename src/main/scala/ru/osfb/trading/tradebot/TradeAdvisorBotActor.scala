@@ -62,9 +62,10 @@ class TradeAdvisorBotActor
       implicit val history = new ArrayTradeHistory(historyRecords)
       val lastTime = history.lastTime
       val lastPrice = history.priceAt(lastTime)
+      val indicators = strategy.indicators(lastTime)
       //TODO: stash history update events while position is closing/opening
       position match {
-        case Some(pos) => strategy.close(lastTime, pos.positionType) foreach {
+        case Some(pos) => strategy.close(indicators, pos.positionType) foreach {
           case PositionOrder(price, executionTime) =>
             val openTime = lastTime - pos.openedAt.getEpochSecond
             notificationService.notify(s"${pos.positionType.toString} - Close at $price")
@@ -74,7 +75,7 @@ class TradeAdvisorBotActor
             positionsService.close(pos.id.get, name, lastPrice)
             position = None
         }
-        case None => strategy.open(lastTime) foreach {
+        case None => strategy.open(indicators) foreach {
           case (positionType, PositionOrder(price, executionTime)) =>
             notificationService.notify(s"${positionType.toString} - Open at $lastPrice")
             context.system.scheduler.scheduleOnce(executionTime.seconds) {

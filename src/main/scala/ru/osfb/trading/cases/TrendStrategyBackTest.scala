@@ -1,5 +1,6 @@
 package ru.osfb.trading.cases
 
+import java.io.FileWriter
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDateTime, ZoneId}
 
@@ -21,17 +22,28 @@ object TrendStrategyBackTest extends App with LazyLogging {
 
   val from = toInstant(args(1))
   val till = toInstant(args(2))
+  val timeStepFactor = args(3).toLong
+  val timeFrame = args(4).toLong
+  val localTimeFactor = args(5).toLong
+  val localTrendFactor = args(6).toDouble
+  val openFactor = args(7).toDouble
+  val closeFactor = args(8).toDouble
+  val orderVolFactor = args(9).toDouble
+  val orderExecTimeFactor = args(10).toLong
+
   val fromSec = from.toEpochMilli / 1000
   val tillSec = till.toEpochMilli / 1000
-  val timeFrame = args(3).toLong
-  val avgTimeFactor = args(4).toLong
-  val openFactor = args(5).toDouble
-  val closeFactor = args(6).toDouble
-  val orderVolFactor = args(7).toDouble
-  val orderExecTimeFactor = args(8).toDouble
 
-  val strategy = new TrendStrategy(timeFrame, avgTimeFactor, openFactor, closeFactor, orderVolFactor, (orderExecTimeFactor * timeFrame / avgTimeFactor).toLong)
-  val fetchTimeStart = from minusSeconds (timeFrame * (1.0/avgTimeFactor + 1.0)).toLong
+  val strategy = new TrendStrategy(
+    timeFrame,
+    localTimeFactor,
+    localTrendFactor,
+    openFactor,
+    closeFactor,
+    orderVolFactor,
+    orderExecTimeFactor
+  )
+  val fetchTimeStart = from minusSeconds 5*timeFrame
   val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   //val trades = BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
   implicit val history = new ArrayTradeHistory(trades)
@@ -39,12 +51,18 @@ object TrendStrategyBackTest extends App with LazyLogging {
   val runner = new StrategyBackTest
 
   logger.info(s"Running backtest from $from till $till")
-  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / (6 * avgTimeFactor))
+  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / timeStepFactor)
 
-  logger.info("Backtest completed")
-  logger.info(s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days")
-  logger.info(s"Failed: ${stat.failed.count} trades with ${stat.failed.profit * 100}% loss, avg time: ${stat.failed.time / (86400 * stat.failed.count)} days")
-  logger.info(s"Total: ${stat.succeeded.count + stat.failed.count} trades with ${(stat.succeeded.profit + stat.failed.profit) * 100}% profit" +
-    s", avg time: ${(stat.succeeded.time + stat.failed.time) / (86400 * (stat.succeeded.count + stat.failed.count))} days")
+  val info = "Args: " + args.reduce(_ + "," + _) + "\n" +
+  s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days\n" +
+  s"Failed: ${stat.failed.count} trades with ${stat.failed.profit * 100}% loss, avg time: ${stat.failed.time / (86400 * stat.failed.count)} days\n" +
+  s"Total: ${stat.succeeded.count + stat.failed.count} trades with ${(stat.succeeded.profit + stat.failed.profit) * 100}% profit" +
+  s", avg time: ${(stat.succeeded.time + stat.failed.time) / (86400 * (stat.succeeded.count + stat.failed.count))} days"
+
+  logger.info(info)
+
+  val fw = new FileWriter("backtest/" + Instant.now().toString + ".txt")
+  fw.write(info)
+  fw.close()
 
 }

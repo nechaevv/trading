@@ -32,7 +32,7 @@ class TradeHistoryDownloaderActor (
 
   override def receive: Receive = {
     case Poll => feed.poll(from) pipeTo self
-    case trades: Seq[TradeRecord] => if (trades.nonEmpty) {
+    case trades:                                                                                                                                                                                                                                                                  Seq[TradeRecord] => if (trades.nonEmpty) {
       val historyQuery = tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol)
       database run {
         historyQuery.filter(t => t.time between (trades.last.time, trades.head.time)).map(_.id).result
