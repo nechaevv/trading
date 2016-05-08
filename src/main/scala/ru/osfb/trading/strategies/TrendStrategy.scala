@@ -1,5 +1,4 @@
 package ru.osfb.trading.strategies
-import play.api.libs.json.{JsObject, Json}
 import ru.osfb.trading.calculations._
 import ru.osfb.trading.db.TradeType
 import ru.osfb.trading.db.TradeType.TradeType
@@ -22,7 +21,7 @@ class TrendStrategy
   override type StrategyIndicators = TrendIndicators
 
   override def open(indicators: TrendIndicators): Option[(PositionType, PositionOrder)] = {
-    val trendFactor = (1.0 - localTrendFactor)*indicators.trend + localTrendFactor*indicators.localTrend
+    val trendFactor = (1.0 - Math.abs(localTrendFactor))*indicators.trend + localTrendFactor*indicators.localTrend
     if (trendFactor > openFactor) Some(PositionType.Long, orderProps(indicators, TradeType.Buy))
     else if (trendFactor < -openFactor) Some(PositionType.Short, orderProps(indicators, TradeType.Sell))
     else None

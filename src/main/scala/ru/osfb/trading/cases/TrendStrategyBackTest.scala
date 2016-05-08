@@ -22,7 +22,7 @@ object TrendStrategyBackTest extends App with LazyLogging {
 
   val from = toInstant(args(1))
   val till = toInstant(args(2))
-  val timeStepFactor = args(3).toLong
+  val timeStep = args(3).toLong
   val timeFrame = args(4).toLong
   val localTimeFactor = args(5).toLong
   val localTrendFactor = args(6).toDouble
@@ -49,9 +49,11 @@ object TrendStrategyBackTest extends App with LazyLogging {
   implicit val history = new ArrayTradeHistory(trades)
 
   val runner = new StrategyBackTest
+  val systime = System.currentTimeMillis()
 
   logger.info(s"Running backtest from $from till $till")
-  val stat = runner.run(strategy, fromSec, tillSec, timeFrame / timeStepFactor)
+  val stat = runner.run(strategy, fromSec, tillSec, timeStep)
+  logger.info(s"Finished for ${(System.currentTimeMillis() - systime)/1000} sec")
 
   val info = "Args: " + args.reduce(_ + "," + _) + "\n" +
   s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days\n" +

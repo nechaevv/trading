@@ -1,9 +1,7 @@
 package ru.osfb.trading.cases
 
-import java.io.FileWriter
-import java.time
-import java.time.{Instant, LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
+import java.time.{Instant, LocalDateTime, ZoneId}
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations._
