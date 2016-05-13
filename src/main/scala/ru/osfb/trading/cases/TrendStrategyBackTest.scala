@@ -6,7 +6,7 @@ import java.time.{Instant, LocalDateTime, ZoneId}
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations.ArrayTradeHistory
-import ru.osfb.trading.connectors.{BfxData, CsvHistoryStore}
+import ru.osfb.trading.connectors.{BfxData, CsvHistoryStore, Finam}
 import ru.osfb.trading.strategies.TrendStrategy
 
 import scala.concurrent.Await
@@ -44,8 +44,9 @@ object TrendStrategyBackTest extends App with LazyLogging {
     orderExecTimeFactor
   )
   val fetchTimeStart = from minusSeconds 5*timeFrame
-  val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
+  //val trades = Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   //val trades = BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
+  val trades = Finam.loadCsvTrades(args(0))
   implicit val history = new ArrayTradeHistory(trades)
 
   val runner = new StrategyBackTest
@@ -56,14 +57,14 @@ object TrendStrategyBackTest extends App with LazyLogging {
   logger.info(s"Finished for ${(System.currentTimeMillis() - systime)/1000} sec")
 
   val info = "Args: " + args.reduce(_ + "," + _) + "\n" +
-  s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days\n" +
-  s"Failed: ${stat.failed.count} trades with ${stat.failed.profit * 100}% loss, avg time: ${stat.failed.time / (86400 * stat.failed.count)} days\n" +
+    (if(stat.succeeded.count > 0) s"Succeded: ${stat.succeeded.count} trades with ${stat.succeeded.profit * 100}% profit, avg time: ${stat.succeeded.time / (86400 * stat.succeeded.count)} days\n" else "") +
+    (if(stat.failed.count > 0) s"Failed: ${stat.failed.count} trades with ${stat.failed.profit * 100}% loss, avg time: ${stat.failed.time / (86400 * stat.failed.count)} days\n" else "") +
   s"Total: ${stat.succeeded.count + stat.failed.count} trades with ${(stat.succeeded.profit + stat.failed.profit) * 100}% profit" +
   s", avg time: ${(stat.succeeded.time + stat.failed.time) / (86400 * (stat.succeeded.count + stat.failed.count))} days"
 
   logger.info(info)
 
-  val fw = new FileWriter("backtest/" + Instant.now().toString + ".txt")
+  val fw = new FileWriter("backtest/" + Instant.now().toString.replace(":","-") + ".txt")
   fw.write(info)
   fw.close()
 
