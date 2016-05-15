@@ -1,9 +1,13 @@
 package ru.osfb.trading.tradebot
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.Props
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.feeds.TradeHistoryDownloaderActor
 import ru.osfb.trading.strategies.TrendStrategy
+
+import scala.concurrent.duration._
 
 /**
   * Created by sgl on 09.04.16.
@@ -32,7 +36,11 @@ object TradeBot extends App with LazyLogging {
     tradeHistoryService,
     notificationService,
     configuration))
-  actorSystem.actorOf(Props(classOf[TradeHistoryDownloaderActor], bitfinexTradeFeed))
+  actorSystem.actorOf(Props(classOf[TradeHistoryDownloaderActor],
+    bitfinexTradeFeed,
+    configuration.getDuration("tradebot.poll-interval", TimeUnit.SECONDS).seconds,
+    database
+  ))
 
   Runtime.getRuntime.addShutdownHook(new Thread {
     override def run(): Unit = {

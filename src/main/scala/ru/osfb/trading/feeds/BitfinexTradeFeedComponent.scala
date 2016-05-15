@@ -25,12 +25,12 @@ trait BitfinexTradeFeedComponent {
 
     override def poll(from: Long): Future[Seq[TradeRecord]] = {
       bitfinexExchange.tradeHistory(symbol, from).map(_.map(t => {
-          val tt = t.`type` match {
-            case "sell" => TradeType.Sell
-            case "buy" => TradeType.Buy
-          }
-          TradeRecord(exchange, symbol, t.tid.toString, Instant.ofEpochSecond(t.timestamp), t.price, t.amount, tt)
-        }))
+        val tt = t.`type` match {
+          case "sell" => TradeType.Sell
+          case "buy" => TradeType.Buy
+        }
+        TradeRecord(exchange, symbol, t.tid.toString, Instant.ofEpochSecond(t.timestamp), t.price, t.amount, tt)
+      }))
     }
   }
 
