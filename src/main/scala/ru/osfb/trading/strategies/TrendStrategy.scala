@@ -9,13 +9,13 @@ import ru.osfb.trading.strategies.PositionType.PositionType
   */
 class TrendStrategy
 (
-  timeFrame: Long,
-  localTimeFactor: Long,
-  localTrendFactor: Double,
-  openFactor: Double,
-  closeFactor: Double,
-  orderVolFactor: Double,
-  orderExecutionTimeFactor: Long
+  val timeFrame: Long,
+  val localTimeFactor: Long,
+  val localTrendFactor: Double,
+  val openFactor: Double,
+  val closeFactor: Double,
+  val orderVolFactor: Double,
+  val orderExecutionTimeFactor: Long
 ) extends TradeStrategy {
 
   override type StrategyIndicators = TrendIndicators
