@@ -41,11 +41,8 @@ class TradeAdvisorBotActor
     if (configuration.hasPath("tradebot.notify-start") && configuration.getBoolean("tradebot.notify-start")) {
       notificationService.notify(s"Started for $symbol at $exchange")
     }
-    val positionFuture = positionsService.findOpenPositions(name).map(_.headOption)
-    positionFuture withErrorLog logger pipeTo self
-    positionFuture onComplete { _ =>
-      HistoryUpdateEventBus.subscribe(self, HistoryUpdateEvent(exchange, symbol))
-    }
+    positionsService.findOpenPositions(name).map(positions =>
+      InitPosition(positions.headOption)) withErrorLog logger pipeTo self
   }
 
   var position: Option[Position] = None
@@ -53,8 +50,9 @@ class TradeAdvisorBotActor
   override def receive: Receive = {
     case InitPosition(pos) =>
       position = pos
+      HistoryUpdateEventBus.subscribe(self, HistoryUpdateEvent(exchange, symbol))
     case _:HistoryUpdateEvent =>
-      logger.trace("Analyzing new history records")
+      //logger.trace("Analyzing new history records")
       val now = System.currentTimeMillis() / 1000
       tradeHistoryService.loadLatest(exchange, symbol, strategy.historyDepth)
         .map(DoAnalyze) withErrorLog logger pipeTo self
