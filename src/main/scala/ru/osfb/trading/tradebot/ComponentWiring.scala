@@ -25,7 +25,7 @@ object ComponentWiring
     with DbPositionsServiceComponentImpl
 {
 
-  override def database: _root_.ru.osfb.trading.PgDriver.api.Database = PgDriver.api.Database.forConfig("database")
+  override lazy val database: _root_.ru.osfb.trading.PgDriver.api.Database = PgDriver.api.Database.forConfig("database")
 
   override lazy val bitfinexExchange: BitfinexExchange = new BitfinexExchange
   override lazy val bitcoinchartsService: BitcoinchartsService = new BitcoinchartsService
