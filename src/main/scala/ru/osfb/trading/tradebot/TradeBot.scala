@@ -35,12 +35,12 @@ object TradeBot extends App with LazyLogging {
     positionsService,
     tradeHistoryService,
     notificationService,
-    configuration))
+    configuration), configuration.getString("tradebot.actor-name"))
   actorSystem.actorOf(Props(classOf[TradeHistoryDownloaderActor],
     bitfinexTradeFeed,
     configuration.getDuration("tradebot.poll-interval", TimeUnit.SECONDS).seconds,
     database
-  ), configuration.getString("tradebot.actor-name"))
+  ))
 
   Runtime.getRuntime.addShutdownHook(new Thread {
     override def run(): Unit = {

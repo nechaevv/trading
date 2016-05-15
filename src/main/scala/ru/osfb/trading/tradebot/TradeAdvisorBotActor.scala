@@ -37,9 +37,9 @@ class TradeAdvisorBotActor
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
-    logger.info(s"TradeBot actor started for $symbol at $exchange")
+    logger.info(s"TradeBot actor $name started for $symbol at $exchange")
     if (configuration.hasPath("tradebot.notify-start") && configuration.getBoolean("tradebot.notify-start")) {
-      notificationService.notify(s"Started for $symbol at $exchange")
+      notificationService.notify(s"Started $name for $symbol at $exchange")
     }
     positionsService.findOpenPositions(name).map(positions =>
       InitPosition(positions.headOption)) withErrorLog logger pipeTo self
