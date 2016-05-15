@@ -12,12 +12,12 @@ object TradeBot extends App with LazyLogging {
 
   logger.info("Booting TradeBot...")
 
-  httpServer.start(indicatorController)
+  //httpServer.start(indicatorController)
 
   actorSystem.actorOf(Props(classOf[TradeAdvisorBotActor],
     configuration.getString("tradebot.exchange"),
     configuration.getString("tradebot.symbol"),
-    indicatorService,
+    //indicatorService,
     notificationService,
     configuration))
   actorSystem.actorOf(Props(classOf[TradeHistoryDownloaderActor], bitfinexTradeFeed))
