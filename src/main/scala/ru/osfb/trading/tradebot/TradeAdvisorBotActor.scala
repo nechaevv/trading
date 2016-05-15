@@ -13,6 +13,7 @@ import ru.osfb.trading.feeds.{HistoryUpdateEvent, HistoryUpdateEventBus}
 import ru.osfb.trading.notification.NotificationService
 import ru.osfb.trading.strategies.{PositionOrder, TradeStrategy}
 import ru.osfb.trading.tradebot.TradeAdvisorBotActor.{DoAnalyze, InitPosition}
+import ru.osfb.webapi.utils.FutureUtils._
 
 import scala.concurrent.duration._
 
@@ -41,7 +42,7 @@ class TradeAdvisorBotActor
       notificationService.notify(s"Started for $symbol at $exchange")
     }
     val positionFuture = positionsService.findOpenPositions(name).map(_.headOption)
-    positionFuture pipeTo self
+    positionFuture withErrorLog logger pipeTo self
     positionFuture onComplete { _ =>
       HistoryUpdateEventBus.subscribe(self, HistoryUpdateEvent(exchange, symbol))
     }
@@ -56,7 +57,7 @@ class TradeAdvisorBotActor
       logger.trace("Analyzing new history records")
       val now = System.currentTimeMillis() / 1000
       tradeHistoryService.loadLatest(exchange, symbol, strategy.historyDepth)
-        .map(DoAnalyze) pipeTo self
+        .map(DoAnalyze) withErrorLog logger pipeTo self
     case DoAnalyze(historyRecords) if historyRecords.nonEmpty =>
       implicit val history = new ArrayTradeHistory(historyRecords)
       val lastTime = history.lastTime
@@ -71,7 +72,7 @@ class TradeAdvisorBotActor
             context.system.scheduler.scheduleOnce(executionTime.seconds) {
               notificationService.notify(s"${pos.positionType.toString} - Close immidiately")
             }
-            positionsService.close(pos.id.get, lastPrice)
+            positionsService.close(pos.id.get, lastPrice) withErrorLog logger
             position = None
         }
         case None => strategy.open(indicators) foreach {
@@ -83,7 +84,7 @@ class TradeAdvisorBotActor
             positionsService.open(name, positionType, lastPrice, 1)
               .map(posId => InitPosition(Some(Position(
                 Some(posId), name, 1, positionType, Instant.ofEpochSecond(lastTime), lastPrice, None, None
-              )))) pipeTo self
+              )))) withErrorLog logger pipeTo self
         }
       }
   }

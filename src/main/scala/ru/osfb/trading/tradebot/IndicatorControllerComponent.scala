@@ -2,14 +2,16 @@ package ru.osfb.trading.tradebot
 
 import java.time.Instant
 
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
+import com.typesafe.scalalogging.Logger
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 import ru.osfb.trading.calculations.ArrayTradeHistory
 import ru.osfb.trading.connectors.{BitfinexExchangeComponent, TradeHistoryServiceComponent}
 import ru.osfb.trading.strategies.TrendIndicators
 import ru.osfb.webapi.core.ExecutionContextComponent
 import ru.osfb.webapi.http.PlayJsonMarshallers._
+import ru.osfb.webapi.utils.FutureUtils._
 /**
   * Created by sgl on 09.04.16.
   */
@@ -23,9 +25,11 @@ trait IndicatorControllerComponent {
         implicit val tradeHistory = new ArrayTradeHistory(trades)
         TradeBot.strategy.indicators(now)
       }
-    }) {
+    } withErrorLog logger) {
       complete(_)
     }
   }
+
+  private lazy val logger = Logger(LoggerFactory.getLogger(classOf[IndicatorControllerComponent]))
 
 }
