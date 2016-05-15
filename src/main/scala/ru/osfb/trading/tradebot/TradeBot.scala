@@ -17,7 +17,7 @@ object TradeBot extends App with LazyLogging {
 
   logger.info("Booting TradeBot...")
 
-  //httpServer.start(indicatorController)
+  httpServer.start(indicatorController)
   val strategy = new TrendStrategy(
     configuration.getLong("tradebot.time-frame"),
     configuration.getLong("tradebot.local-time-factor"),

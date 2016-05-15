@@ -12,17 +12,21 @@ import ru.osfb.webapi.http.{HttpServer, HttpServerComponentImpl}
   */
 object ComponentWiring
   extends ConfigurationComponentImpl
+  //core
     with ActorSystemComponentImpl
     with ActorMaterializerComponentImpl
     with ActorExecutionContextComponentImpl
     with DatabaseComponent
+  //services
     with BitfinexExchangeComponent
     with BitcoinchartsServiceComponent
     with PushAllNotificationServiceComponentImpl
-    with HttpServerComponentImpl
     with BitfinexTradeFeedComponent
     with DbHistoryServiceComponentImpl
     with DbPositionsServiceComponentImpl
+  //http
+    with HttpServerComponentImpl
+    with IndicatorControllerComponent
 {
 
   override lazy val database: _root_.ru.osfb.trading.PgDriver.api.Database = PgDriver.api.Database.forConfig("database")
