@@ -1,24 +1,20 @@
 package ru.osfb.trading.connectors
 
 import java.math.BigInteger
-import java.time.Instant
 import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshalling.ToEntityMarshaller
-import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.util.ByteString
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
-import ru.osfb.trading.calculations.Trade
 import ru.osfb.webapi.core.{ActorMaterializerComponent, ActorSystemComponent, ConfigurationComponent, ExecutionContextComponent}
 import ru.osfb.webapi.http.PlayJsonMarshallers._
 import ru.osfb.webapi.utils.FutureUtils._
-import ru.osfb.webapi.utils.Hex
 
 import scala.concurrent.Future
 
@@ -36,46 +32,28 @@ trait BitfinexExchangeComponent {
   class BitfinexExchange extends LazyLogging {
 
     protected val apiUrl = "https://api.bitfinex.com"
+    import ru.osfb.trading.connectors.BitfinexProtocol._
 
-    case class BitfinexTrade(timestamp: Long, price: String, amount: String)
+    def tradeHistory(symbol: String, from: Long, limitOpt: Option[Int] = None): Future[Seq[Trade]] = Http()
+      .singleRequest(HttpRequest(
+        uri = apiUrl + "/v1/trades/" + symbol + "?timestamp=" + from + limitOpt.fold("")(lim => "&limit_trades=" + lim),
+        method = HttpMethods.GET
+      )).flatMap(resp => Unmarshal(resp.entity).to[Seq[Trade]]).withErrorLog(logger)
 
-    implicit val tradeReads = Json.reads[BitfinexTrade]
+    def balances = authRequest[Seq[Balance]]("/v1/balances", Json.obj())
 
-    def fetchTradeHistory(symbol: String, from: Long, till: Long): Future[Seq[Trade]] = {
-      def fetchNext(fromNext: Long, acc: Seq[BitfinexTrade]): Future[Seq[BitfinexTrade]] = {
-        fetchTrades(symbol, fromNext).map({ trades =>
-          //logger.trace("Received trades: " + trades.toString())
-          trades.reverse
-        }).flatMap(trades => if (trades.isEmpty || trades.last.timestamp >= till) Future.successful(acc ++ trades)
-          else fetchNext(trades.last.timestamp + 1, acc ++ trades))
-      }
-      fetchNext(from, Nil).map(trades => {
-        logger.trace(s"Load ${trades.length} trades for $symbol" + (if(trades.isEmpty) "" else
-        s" from ${Instant.ofEpochSecond(trades.head.timestamp)} till ${Instant.ofEpochSecond(trades.last.timestamp)}"))
-        trades.map {
-          case BitfinexTrade(timestamp, priceStr, quantityStr) => Trade(timestamp, priceStr.toDouble * quantityStr.toDouble, quantityStr.toDouble)
-        }
-      })
-    }.withErrorLog(logger)
-
-    implicit val walletBalancesReads = {
-      //implicit val balanceReads =
-        Json.reads[WalletBalance]
-      //Json.reads[Seq[WalletBalance]]
+    def newOrder(symbol: String, side: String, orderType: String, amount: BigDecimal, price: BigDecimal) = {
+      authRequest[OrderStatus]( "/v1/order/new", Json.obj("symbol" -> symbol, "amount" -> amount, "price" -> price,
+        "exchange" -> "bitfinex", "side" -> side, "type" -> orderType))
     }
-    def balances = authRequest[Seq[WalletBalance]]("/v1/balances", Json.obj())
+
+    def orderStatus(orderId: Long) = authRequest[OrderStatus]("/v1/order/status", Json.obj("order_id" -> orderId))
+
+    def cancelOrder(orderId: Long) = authRequest[OrderStatus]("/v1/order/cancel", Json.obj("order_id" -> orderId))
 
     private lazy val apiKey = configuration.getString("bitfinex.api-key")
     private lazy val apiSecret = new SecretKeySpec(
       configuration.getString("bitfinex.api-secret").getBytes, "HmacSHA384")
-
-    protected def fetchTrades(symbol: String, from: Long): Future[Seq[BitfinexTrade]] = {
-      logger.trace(s"Fetching trades for $symbol from $from (${Instant.ofEpochSecond(from)})")
-      val req = HttpRequest(uri = apiUrl + "/v1/trades/" + symbol + "?timestamp=" + from, method = HttpMethods.GET)
-      //logger.trace(req.toString)
-      Http().singleRequest(req)
-        .flatMap(resp => Unmarshal(resp.entity).to[Seq[BitfinexTrade]])
-    }
 
     protected def authRequest[Res](method: String, request: JsValue)(implicit resR: Reads[Res]): Future[Res] = {
       val mac = Mac.getInstance("HmacSHA384")
@@ -104,4 +82,3 @@ trait BitfinexExchangeComponent {
 
 }
 
-case class WalletBalance(`type`: String, currency: String, amount: BigDecimal, available: BigDecimal)

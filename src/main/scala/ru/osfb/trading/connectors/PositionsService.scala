@@ -1,6 +1,7 @@
 package ru.osfb.trading.connectors
 
 import ru.osfb.trading.db.Position
+import ru.osfb.trading.strategies.PositionType.PositionType
 
 import scala.concurrent.Future
 
@@ -9,8 +10,8 @@ import scala.concurrent.Future
   */
 trait PositionsService {
   def findOpenPositions(actorId: String): Future[Seq[Position]]
-  def open(actorId: String, price: BigDecimal, quantity: BigDecimal): Future[Long]
-  def close(id: Long, actorId: String, price: BigDecimal): Future[Unit]
+  def open(actorId: String, positionType: PositionType, price: BigDecimal, quantity: BigDecimal): Future[Long]
+  def close(id: Long, price: BigDecimal): Future[Unit]
 }
 
 trait PositionsServiceComponent {

@@ -1,7 +1,5 @@
 package ru.osfb.trading.feeds
 
-import java.time.Instant
-
 import akka.actor.Actor
 import akka.pattern.pipe
 import com.typesafe.scalalogging.LazyLogging

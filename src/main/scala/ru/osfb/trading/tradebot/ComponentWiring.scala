@@ -1,7 +1,7 @@
 package ru.osfb.trading.tradebot
 
 import ru.osfb.trading.{DatabaseComponent, PgDriver}
-import ru.osfb.trading.connectors.{BitcoinchartsServiceComponent, BitfinexExchangeComponent, DbHistoryServiceComponentImpl, TradeHistoryService}
+import ru.osfb.trading.connectors._
 import ru.osfb.trading.feeds.BitfinexTradeFeedComponent
 import ru.osfb.trading.notification.{NotificationService, PushAllNotificationServiceComponentImpl}
 import ru.osfb.webapi.core.{ActorExecutionContextComponentImpl, ActorMaterializerComponentImpl, ActorSystemComponentImpl, ConfigurationComponentImpl}
@@ -22,6 +22,7 @@ object ComponentWiring
     with HttpServerComponentImpl
     with BitfinexTradeFeedComponent
     with DbHistoryServiceComponentImpl
+    with DbPositionsServiceComponentImpl
 {
 
   override def database: _root_.ru.osfb.trading.PgDriver.api.Database = PgDriver.api.Database.forConfig("database")
@@ -31,6 +32,6 @@ object ComponentWiring
   override lazy val httpServer: HttpServer = new HttpServerImpl
   override lazy val notificationService: NotificationService = new NotificationServiceImpl
   lazy val bitfinexTradeFeed = new BitfinexTradeFeed("BTCUSD")
-  override def tradeHistoryService: TradeHistoryService = new TradeHistoryServiceImpl
-
+  override lazy val tradeHistoryService: TradeHistoryService = new TradeHistoryServiceImpl
+  override lazy val positionsService: PositionsService = new PositionsServiceImpl
 }

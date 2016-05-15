@@ -47,7 +47,6 @@ class TradeAdvisorBotActor
     }
   }
 
-  var stateOpt: Option[Indicators] = None
   var position: Option[Position] = None
 
   override def receive: Receive = {
@@ -72,7 +71,7 @@ class TradeAdvisorBotActor
             context.system.scheduler.scheduleOnce(executionTime.seconds) {
               notificationService.notify(s"${pos.positionType.toString} - Close immidiately")
             }
-            positionsService.close(pos.id.get, name, lastPrice)
+            positionsService.close(pos.id.get, lastPrice)
             position = None
         }
         case None => strategy.open(indicators) foreach {
@@ -81,7 +80,7 @@ class TradeAdvisorBotActor
             context.system.scheduler.scheduleOnce(executionTime.seconds) {
               notificationService.notify(s"${positionType.toString} - Open immidiately")
             }
-            positionsService.open(name, lastPrice, 1)
+            positionsService.open(name, positionType, lastPrice, 1)
               .map(posId => InitPosition(Some(Position(
                 Some(posId), name, 1, positionType, Instant.ofEpochSecond(lastTime), lastPrice, None, None
               )))) pipeTo self
