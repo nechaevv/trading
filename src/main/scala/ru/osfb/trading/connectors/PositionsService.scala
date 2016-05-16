@@ -10,6 +10,7 @@ import scala.concurrent.Future
   */
 trait PositionsService {
   def findOpenPositions(actorId: String): Future[Seq[Position]]
+  def openPositions(): Future[Seq[Position]]
   def open(actorId: String, positionType: PositionType, price: BigDecimal, quantity: BigDecimal): Future[Long]
   def close(id: Long, price: BigDecimal): Future[Unit]
 }

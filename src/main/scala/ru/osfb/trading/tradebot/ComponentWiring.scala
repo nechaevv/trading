@@ -27,6 +27,7 @@ object ComponentWiring
   //http
     with HttpServerComponentImpl
     with IndicatorControllerComponent
+    with PositionsControllerComponent
 {
 
   override lazy val database: _root_.ru.osfb.trading.PgDriver.api.Database = PgDriver.api.Database.forConfig("database")

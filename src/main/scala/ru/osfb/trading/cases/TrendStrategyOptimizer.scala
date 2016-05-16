@@ -47,22 +47,22 @@ object TrendStrategyOptimizer extends App with LazyLogging {
   logger.info(s"Running optimize from $from till $till")
   //Time frame
   //def strategyFactory(param: Long) = new TrendStrategy(param, localTimeFactor, localTrendFactor, openFactor, closeFactor, orderVolFactor, orderExecTimeFactor)
-  //val stat = runner.optimize(strategyFactory, 100000L to 1000000L by 5000L, fromSec, tillSec, timeStep)
+  //val stat = runner.optimize(strategyFactory, 50000L to 1000000L by 1000L, fromSec, tillSec, timeStep)
   //Local time factor
   //def strategyFactory(param: Long) = new TrendStrategy(timeFrame, param, localTrendFactor, openFactor, closeFactor, orderVolFactor, orderExecTimeFactor)
   //val stat = runner.optimize(strategyFactory, 2L to 300L by 1L, fromSec, tillSec, timeStep)
   //Local trend factor
   //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, param, openFactor, closeFactor, orderVolFactor, orderExecTimeFactor)
-  //val stat = runner.optimize(strategyFactory, -0.9 to 0.9 by 0.002, fromSec, tillSec, timeStep)
+  //val stat = runner.optimize(strategyFactory, -0.5 to 0.5 by 0.002, fromSec, tillSec, timeStep)
   //Open factor
   //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, param, closeFactor, orderVolFactor, orderExecTimeFactor)
   //val stat = runner.optimize(strategyFactory, -0.2 to 0.9 by 0.002, fromSec, tillSec, timeStep)
   //Close factor
-  def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, param, orderVolFactor, orderExecTimeFactor)
-  val stat = runner.optimize(strategyFactory, -0.9 to 0.9 by 0.001, fromSec, tillSec, timeStep)
+  //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, param, orderVolFactor, orderExecTimeFactor)
+  //val stat = runner.optimize(strategyFactory, -0.9 to 0.9 by 0.001, fromSec, tillSec, timeStep)
   //Order volatility factor
-  //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, closeFactor, param, orderExecTimeFactor)
-  //val stat = runner.optimize(strategyFactory, 0.0 to 1.0 by 0.01, fromSec, tillSec, timeStep)
+  def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, closeFactor, param, orderExecTimeFactor)
+  val stat = runner.optimize(strategyFactory, 0.0 to 5.0 by 0.01, fromSec, tillSec, timeStep)
   //Order execution time factor
   //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, closeFactor, orderVolFactor, param)
   //val stat = runner.optimize(strategyFactory, 0.2 to 5.0 by 0.1, fromSec, tillSec, timeStep)

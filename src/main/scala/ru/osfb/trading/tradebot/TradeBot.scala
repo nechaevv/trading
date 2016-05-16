@@ -3,6 +3,7 @@ package ru.osfb.trading.tradebot
 import java.util.concurrent.TimeUnit
 
 import akka.actor.Props
+import akka.http.scaladsl.server.Directives._
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.feeds.TradeHistoryDownloaderActor
 import ru.osfb.trading.strategies.TrendStrategy
@@ -17,7 +18,8 @@ object TradeBot extends App with LazyLogging {
 
   logger.info("Booting TradeBot...")
 
-  httpServer.start(indicatorController)
+  httpServer.start(indicatorController ~ positionsController)
+
   val strategy = new TrendStrategy(
     configuration.getLong("tradebot.time-frame"),
     configuration.getLong("tradebot.local-time-factor"),

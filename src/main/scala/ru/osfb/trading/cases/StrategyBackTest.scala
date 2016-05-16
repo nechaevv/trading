@@ -40,11 +40,12 @@ class StrategyBackTest extends LazyLogging {
               case PositionType.Long => price - position.openPrice
               case PositionType.Short => position.openPrice - price
             }) / position.openPrice
+            val positionResult = PositionResult(position.positionType, position.openTime, position.openPrice, indicators.time, price, profit)
             val newStat = if (profit > 0) BacktestStatistics(PositionStatistics(
               stat.succeeded.count + 1, stat.succeeded.profit + profit, stat.succeeded.time + indicators.time - position.openTime
-            ), stat.failed) else BacktestStatistics(stat.succeeded, PositionStatistics(
+            ), stat.failed, positionResult :: stat.results) else BacktestStatistics(stat.succeeded, PositionStatistics(
               stat.failed.count + 1, stat.failed.profit + profit, stat.failed.time + indicators.time - position.openTime
-            ))
+            ), positionResult :: stat.results)
             RunState(None, newStat)
           case None => acc
         }
@@ -54,7 +55,7 @@ class StrategyBackTest extends LazyLogging {
     (from to till by timeStep)
       .par.map(strategy.indicators(_))
       //.seq.sortBy(_.time)
-      .foldLeft(RunState(None, BacktestStatistics(zeroStatistics,zeroStatistics)))(foldFn).statistics
+      .foldLeft(RunState(None, BacktestStatistics(zeroStatistics,zeroStatistics, Nil)))(foldFn).statistics
   }
   def optimize[T](strategyFactory: T => TradeStrategy, params: Seq[T],
                from: Long, till: Long, timeStep: Long)(implicit history: TradeHistory):ParSeq[(T, BacktestStatistics)] = {
@@ -75,4 +76,5 @@ class StrategyBackTest extends LazyLogging {
 
 case class BacktestPosition(openTime: Long, openPrice: Double, positionType: PositionType)
 case class PositionStatistics(count: Int, profit: Double, time: Long)
-case class BacktestStatistics(succeeded: PositionStatistics, failed: PositionStatistics)
+case class BacktestStatistics(succeeded: PositionStatistics, failed: PositionStatistics, results: List[PositionResult])
+case class PositionResult(positionType: PositionType, openedOn: Long, openedAt: Double, closedOn: Long, closedAt: Double, profit: Double)

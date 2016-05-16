@@ -18,7 +18,11 @@ trait DbPositionsServiceComponentImpl extends PositionsServiceComponent {
 
   class PositionsServiceImpl extends PositionsService {
     override def findOpenPositions(actorId: String): Future[Seq[Position]] = database run {
-      positionsTable.filter(_.actorId === actorId).result
+      positionsTable.filter(p => p.actorId === actorId && p.closedAt.isEmpty).result
+    }
+
+    override def openPositions(): Future[Seq[Position]] = database run {
+      positionsTable.filter(_.closedAt.isEmpty).result
     }
 
     override def close(id: Long, price: BigDecimal): Future[Unit] = database run {
