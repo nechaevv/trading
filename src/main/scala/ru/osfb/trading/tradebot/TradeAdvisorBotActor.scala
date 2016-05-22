@@ -7,7 +7,7 @@ import akka.pattern.pipe
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations.{ArrayTradeHistory, Trade}
-import ru.osfb.trading.connectors.{PositionsService, TradeHistoryService}
+import ru.osfb.trading.connectors.{PositionManager, TradeHistoryService}
 import ru.osfb.trading.db.Position
 import ru.osfb.trading.feeds.{HistoryUpdateEvent, HistoryUpdateEventBus}
 import ru.osfb.trading.notification.NotificationService
@@ -25,7 +25,7 @@ class TradeAdvisorBotActor
   exchange: String,
   symbol: String,
   strategy: TradeStrategy,
-  positionsService: PositionsService,
+  positionsService: PositionManager,
   tradeHistoryService: TradeHistoryService,
   notificationService: NotificationService,
   configuration: Config
@@ -41,7 +41,7 @@ class TradeAdvisorBotActor
     if (configuration.hasPath("tradebot.notify-start") && configuration.getBoolean("tradebot.notify-start")) {
       notificationService.notify(s"Started $name for $symbol at $exchange")
     }
-    positionsService.findOpenPositions(name).map(positions =>
+    positionsService.initActorPositions(name).map(positions =>
       InitPosition(positions.headOption)) withErrorLog logger pipeTo self
   }
 
@@ -65,7 +65,7 @@ class TradeAdvisorBotActor
       position match {
         case Some(pos) => strategy.close(indicators, pos.positionType) foreach {
           case PositionOrder(price, executionTime) =>
-            val openTime = lastTime - pos.openedAt.getEpochSecond
+            val openTime = lastTime - pos.openAt.getEpochSecond
             notificationService.notify(s"${pos.positionType.toString} - Close at $price")
             context.system.scheduler.scheduleOnce(executionTime.seconds) {
               notificationService.notify(s"${pos.positionType.toString} - Close immidiately")

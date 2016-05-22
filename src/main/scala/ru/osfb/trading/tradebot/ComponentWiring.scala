@@ -23,7 +23,7 @@ object ComponentWiring
     with PushAllNotificationServiceComponentImpl
     with BitfinexTradeFeedComponent
     with DbHistoryServiceComponentImpl
-    with DbPositionsServiceComponentImpl
+    with BitfinexPositionManagerComponentImpl
   //http
     with HttpServerComponentImpl
     with IndicatorControllerComponent
@@ -38,5 +38,5 @@ object ComponentWiring
   override lazy val notificationService: NotificationService = new NotificationServiceImpl
   lazy val bitfinexTradeFeed = new BitfinexTradeFeed("BTCUSD")
   override lazy val tradeHistoryService: TradeHistoryService = new TradeHistoryServiceImpl
-  override lazy val positionsService: PositionsService = new PositionsServiceImpl
+  override lazy val positionManager: PositionManager = new PositionManagerImpl
 }

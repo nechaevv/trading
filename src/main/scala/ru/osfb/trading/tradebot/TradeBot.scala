@@ -34,7 +34,7 @@ object TradeBot extends App with LazyLogging {
     configuration.getString("tradebot.exchange"),
     configuration.getString("tradebot.symbol"),
     strategy,
-    positionsService,
+    positionManager,
     tradeHistoryService,
     notificationService,
     configuration), configuration.getString("tradebot.actor-name"))
