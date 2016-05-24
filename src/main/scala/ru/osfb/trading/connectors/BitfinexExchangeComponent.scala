@@ -12,6 +12,8 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.util.ByteString
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
+import ru.osfb.trading.connectors.BitfinexProtocol.OrderSide.OrderSide
+import ru.osfb.trading.connectors.BitfinexProtocol.OrderType.OrderType
 import ru.osfb.webapi.core.{ActorMaterializerComponent, ActorSystemComponent, ConfigurationComponent, ExecutionContextComponent}
 import ru.osfb.webapi.http.PlayJsonMarshallers._
 import ru.osfb.webapi.utils.FutureUtils._
@@ -40,9 +42,13 @@ trait BitfinexExchangeComponent {
         method = HttpMethods.GET
       )).flatMap(resp => Unmarshal(resp.entity).to[Seq[Trade]]).withErrorLog(logger)
 
+    def orderBook(symbol: String): Future[OrderBook] = Http()
+      .singleRequest(HttpRequest(uri = apiUrl + "/v1/book/" + symbol,method = HttpMethods.GET)
+      ).flatMap(resp => Unmarshal(resp.entity).to[OrderBook]).withErrorLog(logger)
+
     def balances = authRequest[Seq[Balance]]("/v1/balances", Json.obj())
 
-    def newOrder(symbol: String, side: String, orderType: String, amount: BigDecimal, price: BigDecimal) = {
+    def newOrder(symbol: String, side: OrderSide, orderType: OrderType, amount: BigDecimal, price: BigDecimal) = {
       authRequest[OrderStatus]( "/v1/order/new", Json.obj("symbol" -> symbol, "amount" -> amount, "price" -> price,
         "exchange" -> "bitfinex", "side" -> side, "type" -> orderType))
     }
@@ -81,4 +87,5 @@ trait BitfinexExchangeComponent {
   }
 
 }
+
 
