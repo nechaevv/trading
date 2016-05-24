@@ -36,9 +36,9 @@ object TrendStrategyOptimizer extends App with LazyLogging {
 
   val fetchTimeStart = from minusSeconds 5*timeFrame
   val trades =
-  //Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
+  Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
   //BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
-    Finam.loadCsvTrades(args(0))
+  //  Finam.loadCsvTrades(args(0))
   implicit val history = new ArrayTradeHistory(trades)
 
   val runner = new StrategyBackTest
@@ -58,11 +58,11 @@ object TrendStrategyOptimizer extends App with LazyLogging {
   //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, param, closeFactor, orderVolFactor, orderExecTimeFactor)
   //val stat = runner.optimize(strategyFactory, -0.2 to 0.9 by 0.002, fromSec, tillSec, timeStep)
   //Close factor
-  //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, param, orderVolFactor, orderExecTimeFactor)
-  //val stat = runner.optimize(strategyFactory, -0.9 to 0.9 by 0.001, fromSec, tillSec, timeStep)
+  def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, param, orderVolFactor, orderExecTimeFactor)
+  val stat = runner.optimize(strategyFactory, -0.9 to 0.9 by 0.001, fromSec, tillSec, timeStep)
   //Order volatility factor
-  def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, closeFactor, param, orderExecTimeFactor)
-  val stat = runner.optimize(strategyFactory, 0.0 to 5.0 by 0.01, fromSec, tillSec, timeStep)
+  //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, closeFactor, param, orderExecTimeFactor)
+  //val stat = runner.optimize(strategyFactory, 0.0 to 5.0 by 0.01, fromSec, tillSec, timeStep)
   //Order execution time factor
   //def strategyFactory(param: Double) = new TrendStrategy(timeFrame, localTimeFactor, localTrendFactor, openFactor, closeFactor, orderVolFactor, param)
   //val stat = runner.optimize(strategyFactory, 0.2 to 5.0 by 0.1, fromSec, tillSec, timeStep)

@@ -13,8 +13,8 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
 trait PositionManager {
   def initActorPositions(actorRef: ActorRef): Future[Seq[Position]]
   def openPositions(): Future[Seq[Position]]
-  def open(actorId: String, positionType: PositionType, price: BigDecimal, orderTimeLimit: FiniteDuration): Future[Long]
-  def close(id: Long, price: BigDecimal, orderTimeLimit: FiniteDuration): Future[Unit]
+  def open(actorId: String, positionType: PositionType, price: BigDecimal, orderTimeLimit: FiniteDuration, listener: ActorRef): Future[Long]
+  def close(id: Long, price: BigDecimal, orderTimeLimit: FiniteDuration, listener: ActorRef): Future[Unit]
 }
 
 trait PositionManagerComponent {
