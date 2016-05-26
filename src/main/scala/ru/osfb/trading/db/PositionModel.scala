@@ -3,8 +3,11 @@ package ru.osfb.trading.db
 import java.time.Instant
 
 import ru.osfb.trading.db.PositionStatus.PositionStatus
+import ru.osfb.trading.db.TradeType.TradeType
 import ru.osfb.trading.strategies.PositionType
 import ru.osfb.trading.strategies.PositionType.PositionType
+
+import scala.concurrent.duration.FiniteDuration
 
 /**
   * Created by v.a.nechaev on 19.04.2016.
@@ -23,17 +26,17 @@ object PositionModel {
     def quantity = column[BigDecimal]("QUANTITY")
     def positionType = column[PositionType]("POSITION_TYPE")
     def positionStatus = column[PositionStatus]("POSITION_STATUS")
-    def openOrderId = column[Option[Long]]("OPEN_ORDER_ID")
+    def pendingOrderId = column[Option[Long]]("PENDING_ORDER_ID")
     def openAt = column[Option[Instant]]("OPEN_AT")
     def openPrice = column[Option[BigDecimal]]("OPEN_PRICE")
-    def closeOrderId = column[Option[Long]]("CLOSE_ORDER_ID")
     def closeAt = column[Option[Instant]]("CLOSE_AT")
     def closePrice = column[Option[BigDecimal]]("CLOSE_PRICE")
-    def * = (id.?, actorId, quantity, positionType, positionStatus, openOrderId, openAt, openPrice, closeOrderId,
+    def * = (id.?, actorId, quantity, positionType, positionStatus, pendingOrderId, openAt, openPrice,
       closeAt, closePrice) <> (Position.tupled, Position.unapply)
     def actorIdx = index("POSITIONS_ACTOR_IDX", actorId, unique = false)
   }
   val positionsTable = TableQuery[PositionTable]
+  class OrderTable(t: Tag) extends
 }
 
 case class Position
@@ -43,10 +46,9 @@ case class Position
   quantity: BigDecimal,
   positionType: PositionType,
   positionStatus: PositionStatus,
-  openOrderId: Option[Long],
+  pendingOrderId: Option[Long],
   openAt: Option[Instant],
   openPrice: Option[BigDecimal],
-  closeOrderId: Option[Long],
   closeAt: Option[Instant],
   closePrice: Option[BigDecimal]
 )
@@ -59,3 +61,5 @@ object PositionStatus extends Enumeration {
   val Closed = Value("C")
   val Cancelled = Value("R")
 }
+
+case class Order(id: Long, positionId: Long, side: TradeType, expirationTime: Option[Instant], price: BigDecimal, quantity: BigDecimal)

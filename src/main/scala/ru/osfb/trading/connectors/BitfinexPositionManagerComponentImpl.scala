@@ -79,7 +79,7 @@ trait BitfinexPositionManagerComponentImpl extends PositionManagerComponent {
       positionId <- database run {
         (positionsTable returning positionsTable.map(_.id)) += Position(None, actorId, amount, positionType,
           PositionStatus.PendingOpen, Some(orderStatus.id), Some(Instant.now().plusSeconds(orderTimeLimit.toSeconds)), Some(price),
-          None, None, None)
+          None, None)
       }
     } yield {
       actorSystem.scheduler.scheduleOnce(orderTimeLimit, new Runnable {
@@ -92,7 +92,7 @@ trait BitfinexPositionManagerComponentImpl extends PositionManagerComponent {
               forceOrderStatus <- bitfinexExchange.newOrder(instrument, side, OrderType.ExchangeMarket, amount, price)
               forcedPosition <- database run {
                 val q = positionsTable.filter(_.id === positionId)
-                q.map(_.openOrderId).update(Some(forceOrderStatus.id)) andThen q.result.head
+                q.map(_.pendingOrderId).update(Some(forceOrderStatus.id)) andThen q.result.head
               }
             } yield {
               actorSystem.scheduler.scheduleOnce(forceOrderCheckInterval, new Runnable {
@@ -106,8 +106,7 @@ trait BitfinexPositionManagerComponentImpl extends PositionManagerComponent {
     }
 
     def checkPendingState(position: Position, listener: ActorRef): Future[Option[Position]] = (position.positionStatus match {
-      case PositionStatus.PendingOpen => position.openOrderId
-      case PositionStatus.PendingClose => position.closeOrderId
+      case PositionStatus.PendingOpen | PositionStatus.PendingClose => position.pendingOrderId
       case _ => None
     }) match {
       case None => Future.successful(None)
@@ -124,11 +123,11 @@ trait BitfinexPositionManagerComponentImpl extends PositionManagerComponent {
             } map (listener ! _)
           } else {
             val (q, newStatus) = position.positionStatus match {
-              case PositionStatus.PendingOpen => (positionQ.map(p => (p.openAt, p.openPrice, p.quantity, p.positionStatus)), PositionStatus.Opened)
-              case PositionStatus.PendingClose => (positionQ.map(p => (p.closeAt, p.closePrice, p.quantity, p.positionStatus)), PositionStatus.Closed)
+              case PositionStatus.PendingOpen => (positionQ.map(p => (p.openAt, p.openPrice, p.quantity, p.positionStatus, p.pendingOrderId)), PositionStatus.Opened)
+              case PositionStatus.PendingClose => (positionQ.map(p => (p.closeAt, p.closePrice, p.quantity, p.positionStatus, p.pendingOrderId)), PositionStatus.Closed)
             }
             database run {
-              q.update(Some(Instant.ofEpochSecond(orderStatus.timestamp)), Some(orderStatus.averagePrice), orderStatus.amount, newStatus) andThen q.result.head
+              q.update(Some(Instant.ofEpochSecond(orderStatus.timestamp)), Some(orderStatus.averagePrice), orderStatus.amount, newStatus, None) andThen q.result.head
             } map (listener ! _)
           }) withErrorLog logger
         }.flatMap(_ => database run positionQ.result.headOption)
