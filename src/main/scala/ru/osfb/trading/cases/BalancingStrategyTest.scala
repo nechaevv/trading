@@ -5,7 +5,11 @@ import java.time.format.DateTimeFormatter
 
 import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.calculations.{ArrayTradeHistory, CovarianceTrendFactor, EMA, TrendFactor}
-import ru.osfb.trading.connectors.BfxData
+import ru.osfb.trading.connectors.{BfxData, CsvHistoryStore}
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Created by v.a.nechaev on 30.05.2016.
@@ -17,28 +21,44 @@ object BalancingStrategyTest extends App with LazyLogging {
   val from = toInstant(args(1))
   val till = toInstant(args(2))
   val timeStep = args(3).toLong
-  val timeFrame = args(4).toLong
+  val defaultTimeFrame = args(4).toLong
+  val defaultHysteresis = args(5).toDouble
 
-  val fetchTimeStart = from minusSeconds 5*timeFrame
+  val fetchTimeStart = from minusSeconds 86400*365 // minusSeconds 5*timeFrame
 
   val trades =
-  //Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
-    BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
+  /// Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
+  BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
   //  Finam.loadCsvTrades(args(0))
   implicit val history = new ArrayTradeHistory(trades)
 
   logger.info(s"Running backtest from $from till $till")
 
-  val (baseBalance, instrumentBalance) = (from.getEpochSecond to till.getEpochSecond by timeStep).foldLeft((100.0, 0.0))((balance, time) => {
-    val (baseBalance, instrumentBalance) = balance
-    val tf = CovarianceTrendFactor(time, timeFrame)
-    val price = EMA(time, timeStep)
-    val diff = ((tf + 1.0)/2) - (baseBalance/(baseBalance + instrumentBalance))
-    val tradeAmount = (baseBalance + instrumentBalance*price)*diff
-    (baseBalance - tradeAmount, instrumentBalance + (tradeAmount/price))
-  })
-  val price = EMA(till.getEpochSecond, timeStep)
+  def run(timeFrame: Long, hysteresis: Double) = {
+    val startPrice = history.priceAt(from.getEpochSecond) //EMA(from.getEpochSecond, timeStep)
+    val (baseBalance, instrumentBalance, turnover) = (from.getEpochSecond to till.getEpochSecond by timeStep)
+        .foldLeft((50.0, 50.0 / startPrice, 0.0))((balance, time) => {
+          val (baseBalance, instrumentBalance, turnover) = balance
+          val tf = CovarianceTrendFactor(time, timeFrame)
+          val price = history.priceAt(time) //EMA(time, timeStep)
+          val totalBalance = instrumentBalance * price + baseBalance
+          val diff = tf - ((instrumentBalance * price - baseBalance) / totalBalance)
+          if (Math.abs(diff) > hysteresis) {
+            val tradeAmount = totalBalance * diff / 2
+            (baseBalance - tradeAmount, instrumentBalance + (tradeAmount / price), turnover + Math.abs(tradeAmount))
+          } else balance
+        })
+    val endPrice = history.priceAt(till.getEpochSecond) //EMA(till.getEpochSecond, timeStep)
+    (baseBalance + instrumentBalance*endPrice, 100*startPrice/endPrice, turnover)
+  }
 
-  logger.info(s"Resulting balance: ${baseBalance + instrumentBalance*price} ")
+  val results = for (timeFrame <- (50000 to 5000000 by 5000).par) yield (timeFrame, run(timeFrame, defaultHysteresis))
+  val (timeFrame, (newBalance, reference, turnover)) = results.reduce((r1,r2) => if (r1._2._1 > r2._2._1) r1 else r2)
+  logger.info(s"timeFrame: $timeFrame, max balance: $newBalance, reference: $reference, turnover: $turnover")
+/*
+  val results = for (hysteresis <- (0.0 to 0.7 by 0.05).par) yield (hysteresis, run(defaultTimeFrame, hysteresis))
+  val (hysteresis, (newBalance, reference, turnover)) = results.reduce((r1,r2) => if (r1._2._1 > r2._2._1) r1 else r2)
+  logger.info(s"hysteresis: $hysteresis, max balance: $newBalance, reference: $reference, turnover: $turnover")
+*/
 
 }
