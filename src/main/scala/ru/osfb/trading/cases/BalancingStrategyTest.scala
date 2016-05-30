@@ -27,8 +27,8 @@ object BalancingStrategyTest extends App with LazyLogging {
   val fetchTimeStart = from minusSeconds 86400*365 // minusSeconds 5*timeFrame
 
   val trades =
-  /// Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
-  BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
+  Await.result(CsvHistoryStore.loadHistory(args(0), fetchTimeStart, till), 1.hour)
+  //BfxData.loadVwapData("BTCUSD", fetchTimeStart.toEpochMilli / 1000, till.toEpochMilli / 1000)
   //  Finam.loadCsvTrades(args(0))
   implicit val history = new ArrayTradeHistory(trades)
 
@@ -44,7 +44,7 @@ object BalancingStrategyTest extends App with LazyLogging {
           val totalBalance = instrumentBalance * price + baseBalance
           val diff = tf - ((instrumentBalance * price - baseBalance) / totalBalance)
           if (Math.abs(diff) > hysteresis) {
-            val tradeAmount = totalBalance * diff / 2
+            val tradeAmount = totalBalance * diff / 1.1
             (baseBalance - tradeAmount, instrumentBalance + (tradeAmount / price), turnover + Math.abs(tradeAmount))
           } else balance
         })
@@ -52,13 +52,16 @@ object BalancingStrategyTest extends App with LazyLogging {
     (baseBalance + instrumentBalance*endPrice, 100*startPrice/endPrice, turnover)
   }
 
-  val results = for (timeFrame <- (50000 to 5000000 by 5000).par) yield (timeFrame, run(timeFrame, defaultHysteresis))
-  val (timeFrame, (newBalance, reference, turnover)) = results.reduce((r1,r2) => if (r1._2._1 > r2._2._1) r1 else r2)
-  logger.info(s"timeFrame: $timeFrame, max balance: $newBalance, reference: $reference, turnover: $turnover")
-/*
-  val results = for (hysteresis <- (0.0 to 0.7 by 0.05).par) yield (hysteresis, run(defaultTimeFrame, hysteresis))
-  val (hysteresis, (newBalance, reference, turnover)) = results.reduce((r1,r2) => if (r1._2._1 > r2._2._1) r1 else r2)
-  logger.info(s"hysteresis: $hysteresis, max balance: $newBalance, reference: $reference, turnover: $turnover")
-*/
+//  val results = for (timeFrame <- (50000 to 500000 by 5000).par) yield (timeFrame, run(timeFrame, defaultHysteresis))
+//  val (timeFrame, (newBalance, reference, turnover)) = results.reduce((r1,r2) => if (r1._2._1 > r2._2._1) r1 else r2)
+//  logger.info(s"timeFrame: $timeFrame, max balance: $newBalance, reference: $reference, turnover: $turnover")
+
+//  val results = for (hysteresis <- (0.0 to 0.7 by 0.01).par) yield (hysteresis, run(defaultTimeFrame, hysteresis))
+//  val (hysteresis, (newBalance, reference, turnover)) = results.reduce((r1,r2) => if (r1._2._1 > r2._2._1) r1 else r2)
+//  logger.info(s"hysteresis: $hysteresis, max balance: $newBalance, reference: $reference, turnover: $turnover")
+
+  val (newBalance, reference, turnover) = run(defaultTimeFrame, defaultHysteresis)
+
+  logger.info(s"balance: $newBalance, reference: $reference, turnover: $turnover")
 
 }
