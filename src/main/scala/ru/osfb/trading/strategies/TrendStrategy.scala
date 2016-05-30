@@ -28,7 +28,7 @@ class TrendStrategy
   }
 
   override def close(indicators: TrendIndicators, positionType: PositionType): Option[PositionOrder] = {
-    val trendFactor = (1.0 - localTrendFactor)*indicators.trend + localTrendFactor*indicators.localTrend
+    val trendFactor = (1.0 - Math.abs(localTrendFactor))*indicators.trend + localTrendFactor*indicators.localTrend
     positionType match {
       case PositionType.Long if trendFactor < closeFactor => Some(orderProps(indicators, TradeType.Sell))
       case PositionType.Short if trendFactor > -closeFactor => Some(orderProps(indicators, TradeType.Buy))

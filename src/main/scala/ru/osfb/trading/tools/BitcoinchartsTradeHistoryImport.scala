@@ -19,7 +19,7 @@ object BitcoinchartsTradeHistoryImport extends App with LazyLogging {
   val batchSize = 100000
   val symbol = args(0)
   for {
-    batch <- Source.fromFile(s"import/$symbol.csv").getLines().grouped(batchSize)
+    batch <- Source.fromFile(s"$symbol.csv").getLines().grouped(batchSize)
   } {
     import ru.osfb.trading.TradingConfiguration.database
     val trades = batch map { line => line.split(",") match {
