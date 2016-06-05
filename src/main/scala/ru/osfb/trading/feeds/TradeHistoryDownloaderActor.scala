@@ -26,7 +26,15 @@ class TradeHistoryDownloaderActor (
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
     logger.info(s"Starting trade downloader for ${feed.exchange} - ${feed.symbol}")
-    context.system.scheduler.schedule(Duration.Zero, pollInterval, self, Poll)
+    val maxTimeF = database run {
+      tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol).map(_.time).max.result
+    }
+    maxTimeF onSuccess {
+      case Some(maxTime) => from = maxTime.getEpochSecond
+    }
+    maxTimeF onComplete { _ =>
+      context.system.scheduler.schedule(Duration.Zero, pollInterval, self, Poll)
+    }
   }
 
   var from: Long = 0
@@ -34,7 +42,6 @@ class TradeHistoryDownloaderActor (
   override def receive: Receive = {
     case Poll => feed.poll(from) pipeTo self
     case trades: Seq[TradeRecord] => if (trades.nonEmpty) {
-      val historyQuery =
       database run {
         tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol && t.id.inSet(trades.map(_.id)))
           .delete andThen (tradeHistoryTable ++= trades).transactionally
