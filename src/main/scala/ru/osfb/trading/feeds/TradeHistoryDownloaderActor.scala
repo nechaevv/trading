@@ -6,10 +6,11 @@ import com.typesafe.scalalogging.LazyLogging
 import ru.osfb.trading.PgDriver.api._
 import ru.osfb.trading.db.TradeHistoryModel.tradeHistoryTable
 import ru.osfb.trading.db.TradeRecord
+import ru.osfb.trading.notification.NotificationService
 import ru.osfb.webapi.utils.FutureUtils._
 
 import scala.concurrent.duration.{Duration, FiniteDuration}
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 /**
   * Created by v.a.nechaev on 19.04.2016.
@@ -17,7 +18,8 @@ import scala.util.Success
 class TradeHistoryDownloaderActor (
   feed: TradeFeed,
   pollInterval: FiniteDuration,
-  database: Database
+  database: Database,
+  notificationService: NotificationService
 ) extends Actor with LazyLogging {
   implicit def executionContext = context.dispatcher
 
@@ -34,8 +36,8 @@ class TradeHistoryDownloaderActor (
     case trades: Seq[TradeRecord] => if (trades.nonEmpty) {
       val historyQuery = tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol)
       database run {
-        historyQuery.filter(t => t.time between (trades.last.time, trades.head.time)).map(_.id).result
-          .flatMap(ids => {
+        historyQuery.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol && t.id.inSet(trades.map(_.id)))
+          .map(_.id).result.flatMap(ids => {
             val idSet = ids.toSet
             tradeHistoryTable ++= trades.filter(t => !(idSet contains t.id))
           }
@@ -45,7 +47,8 @@ class TradeHistoryDownloaderActor (
           logger.info(s"Updated $result trade history records for ${feed.symbol} from ${feed.exchange}")
           HistoryUpdateEventBus.publish(HistoryUpdateEvent(feed.exchange, feed.symbol))
           self ! LoadCompleted(trades.head.time.toEpochMilli / 1000)
-        case _ => ()
+        case Success(_) => ()
+        case Failure(ex) => notificationService.notify(s"Poll failed for ${feed.exchange} - ${feed.symbol}: " + ex.getMessage)
       }
     }
     case LoadCompleted(lastTime) => from = Math.max(from, lastTime)

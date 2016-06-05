@@ -41,7 +41,8 @@ object TradeBot extends App with LazyLogging {
   actorSystem.actorOf(Props(classOf[TradeHistoryDownloaderActor],
     bitfinexTradeFeed,
     configuration.getDuration("tradebot.poll-interval", TimeUnit.SECONDS).seconds,
-    database
+    database,
+    notificationService
   ))
 
   Runtime.getRuntime.addShutdownHook(new Thread {
