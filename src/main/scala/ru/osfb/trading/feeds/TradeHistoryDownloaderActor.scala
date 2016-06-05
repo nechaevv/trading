@@ -25,14 +25,12 @@ class TradeHistoryDownloaderActor (
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
-    logger.info(s"Starting trade downloader for ${feed.exchange} - ${feed.symbol}")
-    val maxTimeF = database run {
+    database run {
       tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol).map(_.time).max.result
-    }
-    maxTimeF onSuccess {
-      case Some(maxTime) => from = maxTime.getEpochSecond
-    }
-    maxTimeF onComplete { _ =>
+    } foreach { maxTimeOpt =>
+      val maxTime = maxTimeOpt.fold(0L)(_.getEpochSecond)
+      logger.info(s"Starting trade downloader for ${feed.exchange} - ${feed.symbol} from $maxTime")
+      self ! LoadCompleted(maxTime)
       context.system.scheduler.schedule(Duration.Zero, pollInterval, self, Poll)
     }
   }
