@@ -34,14 +34,10 @@ class TradeHistoryDownloaderActor (
   override def receive: Receive = {
     case Poll => feed.poll(from) pipeTo self
     case trades: Seq[TradeRecord] => if (trades.nonEmpty) {
-      val historyQuery = tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol)
+      val historyQuery =
       database run {
-        historyQuery.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol && t.id.inSet(trades.map(_.id)))
-          .map(_.id).result.flatMap(ids => {
-            val idSet = ids.toSet
-            tradeHistoryTable ++= trades.filter(t => !(idSet contains t.id))
-          }
-        ).transactionally
+        tradeHistoryTable.filter(t => t.exchange === feed.exchange && t.symbol === feed.symbol && t.id.inSet(trades.map(_.id)))
+          .delete andThen (tradeHistoryTable ++= trades).transactionally
       } withErrorLog logger onComplete {
         case Success(Some(result)) =>
           logger.info(s"Updated $result trade history records for ${feed.symbol} from ${feed.exchange}")
